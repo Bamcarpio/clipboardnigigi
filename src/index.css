@@ -1,0 +1,24 @@
+body {
+  background-color: #474444;
+  color: #ffffff;
+}
+textarea {
+  border-radius: 8px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  resize: vertical;
+}
+button {
+  margin-right: 0.5rem;
+  padding: 5px 10px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover {
+  background-color: #0056b3;
+}
