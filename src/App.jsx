@@ -69,7 +69,7 @@ export default function App() {
         </button>
       </div>
 
-      <h2 style={{ marginTop: '2rem' }}>📱 Gigi's Phone Clipboard</h2>
+      <h2 style={{ marginTop: '2rem' }}>Gigi's Phone Clipboard</h2>
       <textarea
         rows="10"
         style={{ width: '100%' }}
