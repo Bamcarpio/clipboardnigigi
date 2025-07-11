@@ -22,7 +22,7 @@ export default function App() {
   // Debounced sync on input
   const updateClipboard = debounce((laptop, phone) => {
     set(ref(database, 'clipboard'), { laptop, phone });
-  }, 500);
+  }, 0);
 
   // Instant sync (for Clear buttons)
   const saveClipboardNow = (laptop, phone) => {
