@@ -33,7 +33,7 @@ const LoginPage = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h2 className="login-title">BAM BOT</h2>
+        <h2 className="login-title">Supa Bam Tool</h2>
         {error && <p className="login-error">{error}</p>}
         <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">
