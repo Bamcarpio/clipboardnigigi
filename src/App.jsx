@@ -6,7 +6,6 @@ import debounce from 'lodash.debounce';
 export default function App() {
   const [laptopClipboard, setLaptopClipboard] = useState('');
   const [phoneClipboard, setPhoneClipboard] = useState('');
-
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -54,17 +53,15 @@ export default function App() {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: aiPrompt }),
       });
 
       const data = await res.json();
-      const message = data.choices?.[0]?.message?.content || 'No response from AI.';
+      const message = data.choices?.[0]?.message?.content || '⚠️ No response from AI.';
       setAiResponse(message);
     } catch (err) {
-      setAiResponse('❌ Failed to contact AI.');
+      setAiResponse('❌ Failed to contact DeepSeek.');
     } finally {
       setIsLoading(false);
     }
@@ -114,9 +111,9 @@ export default function App() {
         </button>
       </div>
 
-      {/* 👇 ChatGPT Proxy Integration */}
+      {/* 👇 DeepSeek AI Integration */}
       <div style={{ marginTop: '3rem', padding: '1rem', backgroundColor: '#f3f3f3', borderRadius: '8px' }}>
-        <h3>🤖 Ask ChatGPT (via Bam Proxy)</h3>
+        <h3>🤖 Ask DeepSeek (Hugging Face)</h3>
         <textarea
           rows="3"
           placeholder="Type your question here..."
@@ -129,7 +126,16 @@ export default function App() {
         </button>
 
         {aiResponse && (
-          <div style={{ marginTop: '1rem', whiteSpace: 'pre-wrap', background: '#fff', padding: '1rem', borderRadius: '6px' }}>
+          <div
+            style={{
+              marginTop: '1rem',
+              whiteSpace: 'pre-wrap',
+              background: '#fff',
+              padding: '1rem',
+              borderRadius: '6px',
+              border: '1px solid #ccc',
+            }}
+          >
             <strong>AI Response:</strong>
             <p>{aiResponse}</p>
           </div>

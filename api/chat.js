@@ -3,44 +3,32 @@ export default async function handler(req, res) {
       return res.status(405).json({ message: 'Only POST allowed' });
     }
   
+    const { prompt } = req.body;
+  
     try {
-      const { prompt } = req.body;
-  
-      if (!prompt || typeof prompt !== 'string') {
-        console.error('❌ Invalid prompt:', prompt);
-        return res.status(400).json({ error: 'Invalid prompt' });
-      }
-  
-      if (!process.env.OPENAI_API_KEY) {
-        console.error('❌ Missing OPENAI_API_KEY');
-        return res.status(500).json({ error: 'Missing OpenAI API Key in env' });
-      }
-  
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://api-inference.huggingface.co/models/deepseek-ai/deepseek-coder-6.7b-instruct', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            { role: 'user', content: prompt },
-          ],
+          inputs: prompt,
         }),
       });
   
       const data = await response.json();
   
-      if (!response.ok) {
-        console.error('❌ OpenAI API Error:', data);
-        return res.status(500).json({ error: data });
+      if (data.error) {
+        console.error('❌ DeepSeek API Error:', data);
+        return res.status(500).json({ error: data.error });
       }
   
-      res.status(200).json(data);
+      const generatedText = data[0]?.generated_text || '⚠️ No response';
+      res.status(200).json({ choices: [{ message: { content: generatedText } }] });
+  
     } catch (err) {
-      console.error('❌ Server Error:', err.message);
+      console.error('❌ Server error:', err);
       res.status(500).json({ error: err.message });
     }
   }
