@@ -21,13 +21,19 @@ export default async function handler(req, res) {
       const data = await response.json();
   
       if (data.error) {
+        // ✅ Better logging for debugging
         return res.status(500).json({ error: data.error });
       }
   
-      const message = data[0]?.generated_text || '⚠️ No response';
+      // ✅ Debug: log full response if unexpected
+      if (!Array.isArray(data) || !data[0]?.generated_text) {
+        return res.status(500).json({ error: 'Unexpected response', raw: data });
+      }
+  
+      const message = data[0].generated_text;
       res.status(200).json({ choices: [{ message: { content: message } }] });
     } catch (error) {
-      res.status(500).json({ error: 'Server error' });
+      res.status(500).json({ error: 'Server error', detail: error.message });
     }
   }
   
