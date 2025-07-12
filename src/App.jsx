@@ -75,7 +75,7 @@ const App = () => {
         setLaptopClipboard(data.laptop || '');
         setPhoneClipboard(data.phone || '');
       } else {
-        // If no data, initialize with empty strings
+        // If no data, initialize with empty stringggss
         setLaptopClipboard('');
         setPhoneClipboard('');
       }
