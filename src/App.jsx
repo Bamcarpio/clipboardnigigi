@@ -6,13 +6,13 @@ import { getDatabase, ref, set, onValue } from 'firebase/database';
 import debounce from 'lodash.debounce';
 import LoginPage from './LoginPage'; // Import the new LoginPage component
 
-// Main App component for the chatbot with integrated clipboard
+// Main App component for the intelligent helper tool with integrated clipboard
 const App = () => {
   // --- Authentication States ---
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Tracks if a user is logged in
   const [loadingAuth, setLoadingAuth] = useState(true); // To show a loading indicator during auth check
 
-  // --- Chatbot States ---
+  // --- Helper Tool States ---
   const [messages, setMessages] = useState([]); // Stores chat messages
   const [input, setInput] = useState(''); // Current chat input value
   const messagesEndRef = useRef(null); // Ref for auto-scrolling chat
@@ -139,7 +139,7 @@ const App = () => {
     }
   };
 
-  // --- Chatbot Functions ---
+  // --- Helper Tool Functions ---
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -151,7 +151,7 @@ const App = () => {
 
   /**
    * Handles sending a message.
-   * Adds the user's message to the chat and then simulates a bot response.
+   * Adds the user's message to the chat and then simulates a response from the intelligent processing unit.
    */
   const handleSendMessage = async () => {
     if (input.trim() === '') return; // Don't send empty messages
@@ -162,16 +162,16 @@ const App = () => {
     setInput(''); // Clear the input field
 
     // Simulate a typing indicator while waiting for a response
-    const typingIndicator = { text: 'Bam Bot is typing...', sender: 'bot', id: 'typing' };
+    const typingIndicator = { text: 'Supa Bam Tool is typing...', sender: 'tool', id: 'typing' };
     setMessages((prevMessages) => [...prevMessages, typingIndicator]);
 
-    let botResponseText = "I'm not sure how to respond to that."; // Default fallback
+    let toolResponseText = "I'm not sure how to respond to that."; // Default fallback
 
     try {
       // Gemini API Integration Example
       // The API key will be provided by the Canvas environment
-      const apiKey = "AIzaSyDCVbaHWAiInuahgACa9oRddPDA9YbTZyE"; // Leave this as an empty string; Canvas will inject the key at runtime
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      const apiUrl = `/api/ask`; // Uses your Vercel serverless API now
+
 
       let chatHistory = [];
       chatHistory.push({ role: "user", parts: [{ text: input }] });
@@ -180,32 +180,33 @@ const App = () => {
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ prompt: input })
       });
+      
 
       const result = await response.json();
 
       if (result.candidates && result.candidates.length > 0 &&
         result.candidates[0].content && result.candidates[0].content.parts &&
         result.candidates[0].content.parts.length > 0) {
-        botResponseText = result.candidates[0].content.parts[0].text;
+        toolResponseText = result.candidates[0].content.parts[0].text;
       } else {
-        console.warn('Gemini API response structure unexpected:', result);
-        botResponseText = "I received an empty response from the AI. Please try again.";
+        console.warn('Intelligent Tool API response structure unexpected:', result);
+        toolResponseText = "I received an empty response from the intelligent tool. Please try again.";
       }
 
-      // Remove the typing indicator and add the actual bot response
+      // Remove the typing indicator and add the actual tool response
       setMessages((prevMessages) =>
         prevMessages
           .filter((msg) => msg.id !== 'typing') // Remove typing indicator
-          .concat({ text: botResponseText, sender: 'bot' }) // Add bot's actual response
+          .concat({ text: toolResponseText, sender: 'tool' }) // Add tool's actual response
       );
     } catch (error) {
-      console.error('Error fetching bot response:', error);
+      console.error('Error fetching tool response:', error);
       setMessages((prevMessages) =>
         prevMessages
           .filter((msg) => msg.id !== 'typing')
-          .concat({ text: "Oops! Something went wrong while connecting to the AI. Please try again.", sender: 'bot' })
+          .concat({ text: "Oops! Something went wrong while connecting to the intelligent processing unit. Please try again.", sender: 'tool' })
       );
     }
   };
@@ -299,7 +300,7 @@ const App = () => {
       <div className="flex flex-col w-full max-w-xl mx-auto bg-gray-800 rounded-xl shadow-2xl overflow-hidden"> {/* Darker main container */}
         {/* Chat Header */}
         <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white p-4 text-center text-2xl font-semibold rounded-t-xl shadow-md"> {/* Darker gradient */}
-          Supa Bam Bot for Adine
+          Supa Bam Tool for Adine
           {userId && (
             <div className="text-sm mt-1 opacity-80">
               
@@ -384,7 +385,7 @@ const App = () => {
         <div className="flex-1 p-4 overflow-y-auto h-96 custom-scrollbar bg-gray-700"> {/* Darker chat background */}
           {messages.length === 0 && (
             <div className="text-center text-gray-400 mt-10"> {/* Lighter gray text */}
-             
+              
             </div>
           )}
           {messages.map((msg, index) => (
@@ -398,7 +399,7 @@ const App = () => {
                 className={`max-w-[85%] p-3 rounded-lg shadow-sm ${
                   msg.sender === 'user'
                     ? 'bg-blue-600 text-white rounded-br-none' // Darker blue user messages
-                    : 'bg-gray-600 text-gray-100 rounded-bl-none' // Darker gray bot messages, lighter text
+                    : 'bg-gray-600 text-gray-100 rounded-bl-none' // Darker gray tool messages, lighter text
                 }`}
               >
                 {renderMessageContent(msg.text)}
