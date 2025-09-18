@@ -491,7 +491,7 @@ const App = () => {
                             onClick={createNewConversation}
                             className="w-full px-4 py-2 mb-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 ease-in-out"
                         >
-                            + New Chat
+                            New Chat
                         </button>
                         <div className="flex-1">
                             {allConversations.map(conv => (
