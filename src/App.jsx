@@ -4,7 +4,6 @@ import app from './firebase';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDatabase, ref, set, onValue, push, remove } from 'firebase/database';
 import debounce from 'lodash.debounce';
-import LoginPage from './LoginPage';
 
 // New TypingIndicator component
 const TypingIndicator = () => (
@@ -104,9 +103,9 @@ const App = () => {
                     id: key,
                     ...data[key]
                 })).sort((a, b) => b.createdAt - a.createdAt);
-                    
+                
                 setAllConversations(conversationsList);
-                    
+                
                 if (!activeConversationId && conversationsList.length > 0) {
                     setActiveConversationId(conversationsList[0].id);
                 } else if (activeConversationId && !conversationsList.find(conv => conv.id === activeConversationId)) {
@@ -180,14 +179,19 @@ const App = () => {
     };
 
     const handleCopyClipboardText = async (textToCopy) => {
+        if (!textToCopy) {
+            console.warn("Attempted to copy empty text.");
+            return;
+        }
+
         // Use the modern Clipboard API for a more reliable copy function
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                console.log('Text copied to clipboard successfully!');
+                alert('Text copied to clipboard successfully!'); // Provide explicit feedback
             } catch (err) {
                 console.error('Failed to copy text using Clipboard API: ', err);
-                // Fallback for older browsers
+                // Fallback for older browsers or security issues
                 fallbackCopyTextToClipboard(textToCopy);
             }
         } else {
@@ -206,9 +210,10 @@ const App = () => {
         el.select();
         try {
             document.execCommand('copy');
-            console.log('Text copied to clipboard using fallback method!');
+            alert('Text copied to clipboard using fallback method!');
         } catch (err) {
             console.error('Failed to copy text with fallback: ', err);
+            alert('Failed to copy text. Please try again or copy manually.');
         } finally {
             document.body.removeChild(el);
         }
@@ -273,7 +278,7 @@ const App = () => {
         if (input.trim() === '' || !activeConversationId) return;
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
-            
+        
         const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
         setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
@@ -301,10 +306,10 @@ const App = () => {
             const result = await response.json();
                 
             const toolResponseText = result.candidates && result.candidates.length > 0 &&
-                                        result.candidates[0].content && result.candidates[0].content.parts &&
-                                        result.candidates[0].content.parts.length > 0
-                                        ? result.candidates[0].content.parts[0].text
-                                        : "I received an empty response from the intelligent tool. Please try again.";
+                                    result.candidates[0].content && result.candidates[0].content.parts &&
+                                    result.candidates[0].content.parts.length > 0
+                                    ? result.candidates[0].content.parts[0].text
+                                    : "I received an empty response from the intelligent tool. Please try again.";
 
             const toolMessage = { text: toolResponseText, sender: 'tool', timestamp: Date.now() };
 
