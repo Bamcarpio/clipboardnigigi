@@ -225,13 +225,6 @@ const App = () => {
         scrollToBottom();
     }, [messages, isTyping]);
 
-    // New useEffect to trigger Prism.js highlighting
-    useEffect(() => {
-        if (window.Prism) {
-            window.Prism.highlightAll();
-        }
-    }, [messages]);
-
     const createNewConversation = () => {
         if (activeConversationId && messages.length === 0) {
             setIsSidebarOpen(false);
@@ -356,7 +349,7 @@ const App = () => {
 
             parts.push(
                 <div key={`code-${match.index}`} className="relative my-2">
-                    <pre className={`language-${language || 'plaintext'} bg-black p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words`}>
+                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
                         <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
                     </pre>
                     <button
@@ -604,7 +597,7 @@ const App = () => {
                         </div>
                         <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-none md:rounded-br-xl">
                             <textarea
-                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out max-h-40 overflow-y-auto bg-gray-700 text-gray-100"
+                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out **max-h-40 overflow-y-auto** bg-gray-700 text-gray-100"
                                 placeholder=""
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
