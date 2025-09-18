@@ -336,19 +336,22 @@ const App = () => {
         let lastIndex = 0;
         let match;
 
-        // First, check for standard markdown code blocks
+        // Loop through the entire message to find all code blocks
         while ((match = codeBlockRegex.exec(messageText)) !== null) {
             const [fullMatch, codeContent] = match;
             const preCodeText = messageText.substring(lastIndex, match.index);
             
+            // Render any text that came before the code block
             if (preCodeText) {
                 preCodeText.split('\n').forEach((line, i) => {
+                    // Only render if the line has content
                     if (line.trim() !== '') {
                         parts.push(<p key={`pre-text-${lastIndex}-${i}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
                     }
                 });
             }
 
+            // Render the code block itself
             parts.push(
                 <div key={`code-${match.index}`} className="relative my-2 w-full overflow-hidden">
                     <pre className="bg-black text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
@@ -363,47 +366,19 @@ const App = () => {
                     </button>
                 </div>
             );
+            // Update the index to continue searching after the current match
             lastIndex = match.index + fullMatch.length;
         }
 
+        // Render any remaining text that came after the last code block
         const remainingText = messageText.substring(lastIndex);
-        
-        // Secondary check for code-like content that isn't in a markdown block
-        const isCodeLike = remainingText.split('\n').some(line => {
-            const trimmedLine = line.trim();
-            return (
-                trimmedLine.includes('(') || 
-                trimmedLine.includes(';') || 
-                trimmedLine.includes('{') ||
-                trimmedLine.includes('}')
-            );
-        });
-
         if (remainingText) {
-            if (isCodeLike) {
-                parts.push(
-                    <div key={`code-like-${lastIndex}`} className="relative my-2 w-full overflow-hidden">
-                        <pre className="bg-black text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
-                            <code className="language-plaintext">{remainingText}</code>
-                        </pre>
-                        <button
-                            onClick={() => handleCopyClipboardText(remainingText)}
-                            className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
-                            title="Copy code"
-                        >
-                            Copy
-                        </button>
-                    </div>
-                );
-            } else {
-                remainingText.split('\n').forEach((line, i) => {
-                    if (line.trim() !== '') {
-                        parts.push(<p key={`post-text-${lastIndex}-${i}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
-                    }
-                });
-            }
+             remainingText.split('\n').forEach((line, i) => {
+                if (line.trim() !== '') {
+                    parts.push(<p key={`post-text-${lastIndex}-${i}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
+                }
+            });
         }
-
         return parts;
     };
 
