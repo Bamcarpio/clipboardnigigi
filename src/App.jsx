@@ -475,7 +475,7 @@ const App = () => {
                             className="w-full p-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out resize-y bg-gray-700 text-gray-100"
                             value={laptopClipboard}
                             onChange={handleLaptopChange}
-                            placeholder="Type or paste text here..."
+                            placeholder=""
                         />
                         <div className="mt-2 flex space-x-2">
                             <button
@@ -506,7 +506,7 @@ const App = () => {
                             className="w-full p-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out resize-y bg-gray-700 text-gray-100"
                             value={phoneClipboard}
                             onChange={handlePhoneChange}
-                            placeholder="Type or paste text here..."
+                            placeholder=""
                         />
                         <div className="mt-2 flex space-x-2">
                             <button
@@ -537,7 +537,7 @@ const App = () => {
                             onClick={() => setCurrentPage('chat')}
                             className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
                         >
-                            Go to Chat Tool
+                            Tool
                         </button>
                     </div>
                 </div>
@@ -583,7 +583,7 @@ const App = () => {
                                     onClick={() => setCurrentPage('clipboard')}
                                     className="px-3 py-1 bg-indigo-700 hover:bg-indigo-800 text-white text-sm rounded-md transition duration-200 ease-in-out"
                                 >
-                                    Go to Clipboard
+                                   Clipboard
                                 </button>
                                 <span className="flex-1 text-center">Supa Bam Tool for Adine</span>
                                 <button
@@ -611,7 +611,7 @@ const App = () => {
                                 <>
                                     {messages.length === 0 && !isTyping && (
                                         <div className="text-center text-gray-400 mt-10">
-                                            Start a new conversation or select one from the sidebar.
+                                           I love you, Love! You can do it!!
                                         </div>
                                     )}
                                     {messages.map((msg, index) => (
@@ -644,7 +644,7 @@ const App = () => {
                         <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-none md:rounded-br-xl">
                             <textarea
                                 className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out resize-none h-12 overflow-hidden bg-gray-700 text-gray-100"
-                                placeholder="Type a message..."
+                                placeholder=""
                                 value={input}
                                 onChange={(e) => {
                                     setInput(e.target.value);
