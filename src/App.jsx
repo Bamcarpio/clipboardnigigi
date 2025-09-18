@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDatabase, ref, set, onValue, push, remove } from 'firebase/database';
 import debounce from 'lodash.debounce';
 import LoginPage from './LoginPage';
-import './index.css'; // Add this line to import the new CSS
+import './index.css';
 
 // New TypingIndicator component
 const TypingIndicator = () => (
@@ -350,7 +350,7 @@ const App = () => {
             }
 
             parts.push(
-                <div key={`code-${match.index}`} className="relative my-2 w-full max-w-full overflow-hidden">
+                <div key={`code-${match.index}`} className="relative my-2 w-full overflow-hidden">
                     <pre className="bg-black text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
                         <code className="language-plaintext">{codeContent}</code>
                     </pre>
@@ -382,7 +382,7 @@ const App = () => {
         if (remainingText) {
             if (isCodeLike) {
                 parts.push(
-                    <div key={`code-like-${lastIndex}`} className="relative my-2 w-full max-w-full overflow-hidden">
+                    <div key={`code-like-${lastIndex}`} className="relative my-2 w-full overflow-hidden">
                         <pre className="bg-black text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
                             <code className="language-plaintext">{remainingText}</code>
                         </pre>
@@ -608,7 +608,7 @@ const App = () => {
                                                 }`}
                                         >
                                             <div
-                                                className={`p-3 rounded-lg shadow-sm max-w-[85%] ${
+                                                className={`p-3 rounded-lg shadow-sm max-w-2xl w-full ${
                                                     msg.sender === 'user'
                                                         ? 'bg-blue-600 text-white rounded-br-none'
                                                         : 'bg-gray-600 text-gray-100 rounded-bl-none'
