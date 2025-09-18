@@ -6,14 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BAM's Tool</title>
 
-    <!-- Tailwind CSS CDN script -->
-    <!-- This script pulls the Tailwind CSS framework from the internet. -->
-    <!-- It must be loaded before your React app renders to apply styles. -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Custom styles for the scrollbar -->
-    <!-- These specific CSS rules are for the chat message area's scrollbar. -->
-    <!-- They are placed here because they are global styles not tied to a specific React component's render. -->
     <style>
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
@@ -37,5 +33,11 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
   </body>
 </html>
