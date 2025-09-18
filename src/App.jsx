@@ -104,9 +104,9 @@ const App = () => {
                     id: key,
                     ...data[key]
                 })).sort((a, b) => b.createdAt - a.createdAt);
-                 
+                    
                 setAllConversations(conversationsList);
-                 
+                    
                 if (!activeConversationId && conversationsList.length > 0) {
                     setActiveConversationId(conversationsList[0].id);
                 } else if (activeConversationId && !conversationsList.find(conv => conv.id === activeConversationId)) {
@@ -196,7 +196,7 @@ const App = () => {
             document.body.removeChild(el);
         }
     };
-     
+        
     // --- Chat Tool Functions ---
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -245,7 +245,7 @@ const App = () => {
         if (input.trim() === '' || !activeConversationId) return;
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
-         
+            
         const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
         setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
@@ -262,7 +262,7 @@ const App = () => {
                     role: msg.sender === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.text }]
                 }));
-             
+                
             const payload = { contents: chatHistory };
 
             const response = await fetch(apiUrl, {
@@ -271,12 +271,12 @@ const App = () => {
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-             
+                
             const toolResponseText = result.candidates && result.candidates.length > 0 &&
-                                    result.candidates[0].content && result.candidates[0].content.parts &&
-                                    result.candidates[0].content.parts.length > 0
-                                    ? result.candidates[0].content.parts[0].text
-                                    : "I received an empty response from the intelligent tool. Please try again.";
+                                        result.candidates[0].content && result.candidates[0].content.parts &&
+                                        result.candidates[0].content.parts.length > 0
+                                        ? result.candidates[0].content.parts[0].text
+                                        : "I received an empty response from the intelligent tool. Please try again.";
 
             const toolMessage = { text: toolResponseText, sender: 'tool', timestamp: Date.now() };
 
@@ -302,84 +302,102 @@ const App = () => {
 
     // New, robust Markdown renderer using a token-based approach
     const renderMarkdown = (markdownText) => {
-        const tokens = [];
+        const elements = [];
         const lines = markdownText.split('\n');
-
         let inCodeBlock = false;
-        let codeBlockContent = [];
-        let codeBlockLanguage = null;
+        let codeContent = '';
+        let listItems = [];
+
+        const renderLists = () => {
+            if (listItems.length > 0) {
+                elements.push(<ul key={elements.length} className="list-disc list-inside space-y-1 my-2 ml-4">{listItems}</ul>);
+                listItems = [];
+            }
+        };
 
         for (const line of lines) {
-            // Handle code blocks
+            // Check for code block fences
             if (line.startsWith('```')) {
+                renderLists();
                 if (inCodeBlock) {
-                    tokens.push({ type: 'code', content: codeBlockContent.join('\n'), language: codeBlockLanguage });
+                    elements.push(
+                        <div key={elements.length} className="relative my-2">
+                            <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
+                                <code className="language-js break-words">{codeContent.trim()}</code>
+                            </pre>
+                            <button
+                                onClick={() => handleCopyClipboardText(codeContent.trim())}
+                                className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
+                                title="Copy code"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    );
+                    codeContent = '';
                     inCodeBlock = false;
-                    codeBlockContent = [];
-                    codeBlockLanguage = null;
                 } else {
                     inCodeBlock = true;
-                    codeBlockLanguage = line.substring(3).trim() || 'plaintext';
                 }
-                continue; // Skip the delimiter line
+                continue;
             }
 
             if (inCodeBlock) {
-                codeBlockContent.push(line);
-                continue; // Continue filling the code block
+                codeContent += line + '\n';
+                continue;
             }
 
-            // Handle lists, headings, and paragraphs
+            // Handle headings
+            if (line.startsWith('### ')) {
+                renderLists();
+                elements.push(<h3 key={elements.length} className="text-xl font-semibold text-white my-2">{line.substring(4)}</h3>);
+                continue;
+            }
+            if (line.startsWith('## ')) {
+                renderLists();
+                elements.push(<h2 key={elements.length} className="text-2xl font-bold text-white my-3">{line.substring(3)}</h2>);
+                continue;
+            }
+
+            // Handle horizontal rules
+            if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
+                renderLists();
+                elements.push(<hr key={elements.length} className="my-4 border-gray-600" />);
+                continue;
+            }
+
+            // Handle lists
             if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
-                tokens.push({ type: 'list_item', content: line.substring(2).trim() });
-            } else if (line.trim().startsWith('# ')) {
-                tokens.push({ type: 'heading', content: line.substring(2).trim() });
-            } else if (line.trim() !== '') {
-                tokens.push({ type: 'paragraph', content: line.trim() });
+                const content = line.trim().substring(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                listItems.push(<li key={listItems.length} className="text-gray-100">{content}</li>);
+                continue;
+            }
+            
+            // Handle paragraphs and bold text
+            if (line.trim() !== '') {
+                renderLists();
+                let formattedText = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-400 hover:underline">$1</a>');
+                elements.push(<p key={elements.length} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: formattedText }} />);
             }
         }
-
-        const elements = [];
-        let currentListItems = [];
-        let key = 0;
-
-        for (let i = 0; i < tokens.length; i++) {
-            const token = tokens[i];
-
-            // Render accumulated list items before moving to a new element type
-            if (currentListItems.length > 0 && token.type !== 'list_item') {
-                elements.push(<ul key={key++} className="list-disc list-inside ml-4 space-y-1">{currentListItems}</ul>);
-                currentListItems = [];
-            }
-
-            if (token.type === 'code') {
-                elements.push(
-                    <div key={key++} className="relative my-2">
-                        <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                            <code className={`language-${token.language} break-words`}>{token.content}</code>
-                        </pre>
-                        <button
-                            onClick={() => handleCopyClipboardText(token.content)}
-                            className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
-                            title="Copy code"
-                        >
-                            Copy
-                        </button>
-                    </div>
-                );
-            } else if (token.type === 'heading') {
-                elements.push(<h3 key={key++} className="text-xl font-semibold text-white my-2">{token.content}</h3>);
-            } else if (token.type === 'list_item') {
-                currentListItems.push(<li key={key++}>{token.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>);
-            } else if (token.type === 'paragraph') {
-                let formattedText = token.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                elements.push(<p key={key++} className="text-sm my-2" dangerouslySetInnerHTML={{ __html: formattedText }} />);
-            }
-        }
-
-        // Render any remaining list items at the end
-        if (currentListItems.length > 0) {
-            elements.push(<ul key={key++} className="list-disc list-inside ml-4 space-y-1">{currentListItems}</ul>);
+        
+        // Render any remaining list items or code blocks
+        renderLists();
+        if (inCodeBlock) {
+            elements.push(
+                <div key={elements.length} className="relative my-2">
+                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
+                        <code className="language-js break-words">{codeContent.trim()}</code>
+                    </pre>
+                    <button
+                        onClick={() => handleCopyClipboardText(codeContent.trim())}
+                        className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
+                        title="Copy code"
+                    >
+                        Copy
+                    </button>
+                </div>
+            );
         }
 
         return elements;
@@ -559,7 +577,7 @@ const App = () => {
                         >
                             {isSidebarOpen ? 'Hide Conversations' : 'Show Conversations'}
                         </button>
-                         
+                            
                         <div className="flex-grow p-4 overflow-y-auto custom-scrollbar bg-gray-700">
                             {loadingChat ? (
                                 <div className="flex justify-center items-center h-full">
