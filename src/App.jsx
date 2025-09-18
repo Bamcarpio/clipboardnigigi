@@ -104,9 +104,9 @@ const App = () => {
                     id: key,
                     ...data[key]
                 })).sort((a, b) => b.createdAt - a.createdAt);
-                
+
                 setAllConversations(conversationsList);
-                
+
                 if (!activeConversationId && conversationsList.length > 0) {
                     setActiveConversationId(conversationsList[0].id);
                 } else if (activeConversationId && !conversationsList.find(conv => conv.id === activeConversationId)) {
@@ -120,7 +120,7 @@ const App = () => {
             console.error("Error fetching all conversations:", error);
         });
 
-        let messageUnsubscribe = () => {};
+        let messageUnsubscribe = () => { };
         if (activeConversationId) {
             const messagesRef = ref(db, `artifacts/${appId}/users/${userId}/conversations/${activeConversationId}/messages`);
             messageUnsubscribe = onValue(messagesRef, (snapshot) => {
@@ -184,11 +184,11 @@ const App = () => {
             console.warn("Attempted to copy empty text.");
             return;
         }
-        
+
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                console.log('Text copied to clipboard!'); 
+                console.log('Text copied to clipboard!');
             } catch (err) {
                 console.error('Failed to copy text using Clipboard API: ', err);
                 fallbackCopyTextToClipboard(textToCopy);
@@ -272,7 +272,7 @@ const App = () => {
         if (input.trim() === '' || !activeConversationId) return;
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
-        
+
         const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
         setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
@@ -289,7 +289,7 @@ const App = () => {
                     role: msg.sender === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.text }]
                 }));
-            
+
             const payload = { contents: chatHistory };
 
             const response = await fetch(apiUrl, {
@@ -298,12 +298,12 @@ const App = () => {
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-            
+
             const toolResponseText = result.candidates && result.candidates.length > 0 &&
-                                    result.candidates[0].content && result.candidates[0].content.parts &&
-                                    result.candidates[0].content.parts.length > 0
-                                    ? result.candidates[0].content.parts[0].text
-                                    : "I received an empty response from the intelligent tool. Please try again.";
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0
+                ? result.candidates[0].content.parts[0].text
+                : "I received an empty response from the intelligent tool. Please try again.";
 
             const toolMessage = { text: toolResponseText, sender: 'tool', timestamp: Date.now() };
 
@@ -329,16 +329,16 @@ const App = () => {
 
     const renderMessageContent = (messageText) => {
         if (!messageText) return null;
-    
+
         const parts = [];
         const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
         let lastIndex = 0;
         let match;
-    
+
         while ((match = codeBlockRegex.exec(messageText)) !== null) {
             const [fullMatch, language, codeContent] = match;
             const preCodeText = messageText.substring(lastIndex, match.index);
-    
+
             if (preCodeText) {
                 preCodeText.split('\n').forEach((line, i) => {
                     if (line.trim() !== '') {
@@ -346,7 +346,7 @@ const App = () => {
                     }
                 });
             }
-    
+
             parts.push(
                 <div key={`code-${match.index}`} className="relative my-2">
                     <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
@@ -363,7 +363,7 @@ const App = () => {
             );
             lastIndex = match.index + fullMatch.length;
         }
-    
+
         const remainingText = messageText.substring(lastIndex);
         if (remainingText) {
             remainingText.split('\n').forEach((line, i) => {
@@ -372,17 +372,17 @@ const App = () => {
                 }
             });
         }
-    
+
         return parts;
     };
-    
+
     const renderInlineMarkdown = (text) => {
         let formattedText = text;
-        formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>'); 
-        formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+        formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         formattedText = formattedText.replace(/`([^`]+)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>');
         formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>');
-        
+
         return formattedText;
     };
 
@@ -555,7 +555,7 @@ const App = () => {
                         >
                             {isSidebarOpen ? 'Hide Conversations' : 'Show Conversations'}
                         </button>
-                            
+
                         <div className="flex-grow p-4 overflow-y-auto custom-scrollbar bg-gray-700">
                             {loadingChat ? (
                                 <div className="flex justify-center items-center h-full">
@@ -573,14 +573,14 @@ const App = () => {
                                             key={msg.id || index}
                                             className={`flex mb-3 ${
                                                 msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                                            }`}
+                                                }`}
                                         >
                                             <div
                                                 className={`max-w-[85%] p-3 rounded-lg shadow-sm ${
                                                     msg.sender === 'user'
                                                         ? 'bg-blue-600 text-white rounded-br-none'
                                                         : 'bg-gray-600 text-gray-100 rounded-bl-none'
-                                                }`}
+                                                    }`}
                                             >
                                                 {renderMessageContent(msg.text)}
                                             </div>
@@ -597,7 +597,7 @@ const App = () => {
                         </div>
                         <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-none md:rounded-br-xl">
                             <textarea
-                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out resize-none h-12 overflow-hidden bg-gray-700 text-gray-100"
+                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out **max-h-40 overflow-y-auto** bg-gray-700 text-gray-100"
                                 placeholder=""
                                 value={input}
                                 onChange={(e) => {
