@@ -300,7 +300,6 @@ const App = () => {
         }
     };
 
-    // New, robust Markdown renderer using a token-based approach
     const renderMarkdown = (markdownText) => {
         const elements = [];
         const lines = markdownText.split('\n');
@@ -316,9 +315,10 @@ const App = () => {
         };
 
         const formatText = (text) => {
-            // Replaces **text** with <strong>text</strong>
-            let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            // Replaces [text](url) with <a href="url" ...>text</a>
+            // First, remove any inline code fences from the title, but keep them in the body.
+            const cleanedText = text.replace(/`/g, '');
+            // Now, apply other formatting to the cleaned text.
+            let formattedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             formattedText = formattedText.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-400 hover:underline">$1</a>');
             return formattedText;
         };
@@ -374,10 +374,24 @@ const App = () => {
                 continue;
             }
 
-            // Handle lists
+            // Handle list items with bolded titles and separate explanations
             if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
-                const content = line.trim().substring(2);
-                listItems.push(<li key={listItems.length} className="text-gray-100" dangerouslySetInnerHTML={{ __html: formatText(content) }} />);
+                const parts = line.split(':');
+                if (parts.length > 1) {
+                    const title = parts[0].substring(1).trim();
+                    const explanation = parts.slice(1).join(':').trim();
+                    const formattedTitle = formatText(title);
+                    
+                    listItems.push(
+                        <li key={listItems.length} className="text-gray-100">
+                            <p className="my-2" dangerouslySetInnerHTML={{ __html: formattedTitle + ':' }} />
+                            <p className="ml-4 mb-2" dangerouslySetInnerHTML={{ __html: formatText(explanation) }} />
+                        </li>
+                    );
+                } else {
+                    const content = line.trim().substring(2);
+                    listItems.push(<li key={listItems.length} className="text-gray-100" dangerouslySetInnerHTML={{ __html: formatText(content) }} />);
+                }
                 continue;
             }
             
