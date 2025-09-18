@@ -179,24 +179,40 @@ const App = () => {
         updateClipboardDebounced(laptopClipboard, value);
     };
 
+    // New, more robust function for copying code blocks
+    const handleCopyCodeToClipboard = (elementId) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            const textToCopy = element.innerText || element.textContent;
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    alert('Code copied to clipboard successfully!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy text using Clipboard API: ', err);
+                    alert('Failed to copy text. Please try again or copy manually.');
+                });
+        } else {
+            console.error('Element to copy not found:', elementId);
+        }
+    };
+    
+    // Original function for other text areas
     const handleCopyClipboardText = async (textToCopy) => {
         if (!textToCopy) {
             console.warn("Attempted to copy empty text.");
             return;
         }
 
-        // Use the modern Clipboard API for a more reliable copy function
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                alert('Text copied successfully!'); // Provide user feedback
+                alert('Text copied successfully!');
             } catch (err) {
                 console.error('Failed to copy text using Clipboard API: ', err);
-                // Fallback for older browsers or security issues
                 fallbackCopyTextToClipboard(textToCopy);
             }
         } else {
-            // Fallback for browsers that don't support the Clipboard API
             fallbackCopyTextToClipboard(textToCopy);
         }
     };
@@ -211,7 +227,7 @@ const App = () => {
         el.select();
         try {
             document.execCommand('copy');
-            alert('Text copied successfully!'); // Provide user feedback
+            alert('Text copied successfully!');
         } catch (err) {
             console.error('Failed to copy text with fallback: ', err);
             alert('Failed to copy text. Please copy manually.');
@@ -340,6 +356,7 @@ const App = () => {
         let inCodeBlock = false;
         let codeContent = '';
         let listItems = [];
+        let codeBlockIdCounter = 0;
 
         const renderLists = () => {
             if (listItems.length > 0) {
@@ -359,13 +376,14 @@ const App = () => {
             if (line.startsWith('```')) {
                 renderLists();
                 if (inCodeBlock) {
+                    const codeBlockId = `code-block-${codeBlockIdCounter++}`;
                     elements.push(
                         <div key={elements.length} className="relative my-2">
                             <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                                <code className="language-js break-words">{codeContent.trim()}</code>
+                                <code id={codeBlockId} className="language-js break-words">{codeContent.trim()}</code>
                             </pre>
                             <button
-                                onClick={() => handleCopyClipboardText(codeContent.trim())}
+                                onClick={() => handleCopyCodeToClipboard(codeBlockId)}
                                 className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
                                 title="Copy code"
                             >
@@ -431,13 +449,14 @@ const App = () => {
         
         renderLists();
         if (inCodeBlock) {
+            const codeBlockId = `code-block-${codeBlockIdCounter++}`;
             elements.push(
                 <div key={elements.length} className="relative my-2">
                     <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                        <code className="language-js break-words">{codeContent.trim()}</code>
+                        <code id={codeBlockId} className="language-js break-words">{codeContent.trim()}</code>
                     </pre>
                     <button
-                        onClick={() => handleCopyClipboardText(codeContent.trim())}
+                        onClick={() => handleCopyCodeToClipboard(codeBlockId)}
                         className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
                         title="Copy code"
                     >
