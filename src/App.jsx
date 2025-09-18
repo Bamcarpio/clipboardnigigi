@@ -555,7 +555,7 @@ const App = () => {
                         >
                             {isSidebarOpen ? 'Hide Conversations' : 'Show Conversations'}
                         </button>
-
+                            
                         <div className="flex-grow p-4 overflow-y-auto custom-scrollbar bg-gray-700">
                             {loadingChat ? (
                                 <div className="flex justify-center items-center h-full">
@@ -600,11 +600,7 @@ const App = () => {
                                 className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out **max-h-40 overflow-y-auto** bg-gray-700 text-gray-100"
                                 placeholder=""
                                 value={input}
-                                onChange={(e) => {
-                                    setInput(e.target.value);
-                                    e.target.style.height = 'auto';
-                                    e.target.style.height = (e.target.scrollHeight) + 'px';
-                                }}
+                                onChange={(e) => setInput(e.target.value)}
                                 onKeyPress={handleKeyPress}
                                 rows={1}
                             ></textarea>
