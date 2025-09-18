@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import app from './firebase';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDatabase, ref, set, onValue, push, remove } from 'firebase/database';
 import debounce from 'lodash.debounce';
 import LoginPage from './LoginPage';
@@ -104,9 +104,9 @@ const App = () => {
                     id: key,
                     ...data[key]
                 })).sort((a, b) => b.createdAt - a.createdAt);
-                
+                 
                 setAllConversations(conversationsList);
-                
+                 
                 if (!activeConversationId && conversationsList.length > 0) {
                     setActiveConversationId(conversationsList[0].id);
                 } else if (activeConversationId && !conversationsList.find(conv => conv.id === activeConversationId)) {
@@ -196,7 +196,7 @@ const App = () => {
             document.body.removeChild(el);
         }
     };
-    
+     
     // --- Chat Tool Functions ---
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -245,7 +245,7 @@ const App = () => {
         if (input.trim() === '' || !activeConversationId) return;
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
-        
+         
         const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
         setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
@@ -262,7 +262,7 @@ const App = () => {
                     role: msg.sender === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.text }]
                 }));
-            
+             
             const payload = { contents: chatHistory };
 
             const response = await fetch(apiUrl, {
@@ -271,7 +271,7 @@ const App = () => {
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-            
+             
             const toolResponseText = result.candidates && result.candidates.length > 0 &&
                                     result.candidates[0].content && result.candidates[0].content.parts &&
                                     result.candidates[0].content.parts.length > 0
@@ -300,32 +300,66 @@ const App = () => {
         }
     };
 
-    // New function to parse and render Markdown
+    // New, robust Markdown renderer using a token-based approach
     const renderMarkdown = (markdownText) => {
-        const parts = [];
-        let remainingText = markdownText;
+        const tokens = [];
+        const lines = markdownText.split('\n');
+
+        let inCodeBlock = false;
+        let codeBlockContent = [];
+        let codeBlockLanguage = null;
+
+        for (const line of lines) {
+            // Handle code blocks
+            if (line.startsWith('```')) {
+                if (inCodeBlock) {
+                    tokens.push({ type: 'code', content: codeBlockContent.join('\n'), language: codeBlockLanguage });
+                    inCodeBlock = false;
+                    codeBlockContent = [];
+                    codeBlockLanguage = null;
+                } else {
+                    inCodeBlock = true;
+                    codeBlockLanguage = line.substring(3).trim() || 'plaintext';
+                }
+                continue; // Skip the delimiter line
+            }
+
+            if (inCodeBlock) {
+                codeBlockContent.push(line);
+                continue; // Continue filling the code block
+            }
+
+            // Handle lists, headings, and paragraphs
+            if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
+                tokens.push({ type: 'list_item', content: line.substring(2).trim() });
+            } else if (line.trim().startsWith('# ')) {
+                tokens.push({ type: 'heading', content: line.substring(2).trim() });
+            } else if (line.trim() !== '') {
+                tokens.push({ type: 'paragraph', content: line.trim() });
+            }
+        }
+
+        const elements = [];
+        let currentListItems = [];
         let key = 0;
 
-        // Regular expression to match code blocks, lists, headings, and bold text
-        const combinedRegex = /(```(\w+)?\n([\s\S]*?)\n```)|(^\s*[\*-]\s.*)|(^#\s.*)|(\*\*(.*?)\*\*)/gm;
-        
-        let match;
-        while ((match = combinedRegex.exec(remainingText)) !== null) {
-            const preMatchText = remainingText.substring(0, match.index);
-            if (preMatchText.trim()) {
-                parts.push(...preMatchText.split('\n').map(line => line.trim() ? <p key={key++}>{line}</p> : null).filter(Boolean));
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+
+            // Render accumulated list items before moving to a new element type
+            if (currentListItems.length > 0 && token.type !== 'list_item') {
+                elements.push(<ul key={key++} className="list-disc list-inside ml-4 space-y-1">{currentListItems}</ul>);
+                currentListItems = [];
             }
-            
-            // Check for code block match
-            if (match[1]) {
-                const [fullMatch, , language, codeContent] = match;
-                parts.push(
+
+            if (token.type === 'code') {
+                elements.push(
                     <div key={key++} className="relative my-2">
                         <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                            <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
+                            <code className={`language-${token.language}`}>{token.content}</code>
                         </pre>
                         <button
-                            onClick={() => handleCopyClipboardText(codeContent)}
+                            onClick={() => handleCopyClipboardText(token.content)}
                             className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
                             title="Copy code"
                         >
@@ -333,45 +367,26 @@ const App = () => {
                         </button>
                     </div>
                 );
-            } 
-            // Check for list item match
-            else if (match[4]) {
-                const listItems = [match[0].trim()];
-                let listMatch;
-                const listItemRegex = /^\s*[\*-]\s(.*)/gm;
-                let currentPos = match.index + match[0].length;
-                while((listMatch = listItemRegex.exec(remainingText)) !== null && listMatch.index === currentPos) {
-                    listItems.push(listMatch[0].trim());
-                    currentPos += listMatch[0].length;
-                }
-                combinedRegex.lastIndex = currentPos;
-                
-                parts.push(<ul key={key++} className="list-disc list-inside ml-4">{listItems.map((item, i) => <li key={i}>{item.substring(1).trim()}</li>)}</ul>);
+            } else if (token.type === 'heading') {
+                elements.push(<h3 key={key++} className="text-xl font-semibold text-white my-2">{token.content}</h3>);
+            } else if (token.type === 'list_item') {
+                currentListItems.push(<li key={key++}>{token.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>);
+            } else if (token.type === 'paragraph') {
+                let formattedText = token.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                elements.push(<p key={key++} className="text-sm my-2" dangerouslySetInnerHTML={{ __html: formattedText }} />);
             }
-            // Check for heading match
-            else if (match[5]) {
-                parts.push(<h3 key={key++} className="text-lg font-bold text-white my-2">{match[0].substring(2).trim()}</h3>);
-            }
-            // Check for bold text match
-            else if (match[6]) {
-                const boldText = match[7];
-                parts.push(<strong key={key++}>{boldText}</strong>);
-            }
-            
-            remainingText = remainingText.substring(match.index + match[0].length);
-            combinedRegex.lastIndex = 0;
         }
 
-        if (remainingText.trim()) {
-            parts.push(...remainingText.split('\n').map(line => line.trim() ? <p key={key++}>{line}</p> : null).filter(Boolean));
+        // Render any remaining list items at the end
+        if (currentListItems.length > 0) {
+            elements.push(<ul key={key++} className="list-disc list-inside ml-4 space-y-1">{currentListItems}</ul>);
         }
 
-        return parts;
+        return elements;
     };
 
-
     const renderMessageContent = (messageText) => {
-        // Now, we simply call the new Markdown renderer
+        if (!messageText) return null;
         return renderMarkdown(messageText);
     };
 
@@ -510,7 +525,7 @@ const App = () => {
                                         className="ml-2 text-red-400 hover:text-red-500"
                                         title="Delete Conversation"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </button>
@@ -544,7 +559,7 @@ const App = () => {
                         >
                             {isSidebarOpen ? 'Hide Conversations' : 'Show Conversations'}
                         </button>
-                    
+                         
                         <div className="flex-grow p-4 overflow-y-auto custom-scrollbar bg-gray-700">
                             {loadingChat ? (
                                 <div className="flex justify-center items-center h-full">
