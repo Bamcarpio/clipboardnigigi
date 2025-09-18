@@ -179,24 +179,22 @@ const App = () => {
         updateClipboardDebounced(laptopClipboard, value);
     };
 
-    // --- Copy function with modern API and fallback ---
+    // --- Corrected Copy function with removed alerts ---
     const handleCopyClipboardText = async (textToCopy) => {
         if (!textToCopy) {
             console.warn("Attempted to copy empty text.");
             return;
         }
         
-        // Use the modern Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                console.log('Text copied to clipboard!'); // Replaced alert with console.log
+                console.log('Text copied to clipboard!'); 
             } catch (err) {
                 console.error('Failed to copy text using Clipboard API: ', err);
                 fallbackCopyTextToClipboard(textToCopy);
             }
         } else {
-            // Fallback for older browsers
             fallbackCopyTextToClipboard(textToCopy);
         }
     };
@@ -211,7 +209,7 @@ const App = () => {
         el.select();
         try {
             document.execCommand('copy');
-            console.log('Text copied to clipboard!'); // Replaced alert with console.log
+            console.log('Text copied to clipboard!');
         } catch (err) {
             console.error('Failed to copy text with fallback: ', err);
         } finally {
@@ -336,22 +334,29 @@ const App = () => {
         const lines = markdownText.split('\n');
         let inCodeBlock = false;
         let codeContent = '';
+        let listItems = [];
+
+        const flushListItems = () => {
+            if (listItems.length > 0) {
+                elements.push(<ul key={elements.length} className="list-disc list-inside space-y-1 my-2 ml-4">{listItems}</ul>);
+                listItems = [];
+            }
+        };
 
         const renderInlineMarkdown = (text) => {
             let formattedText = text;
-            formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>'); // Bold and italic
-            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
-            formattedText = formattedText.replace(/`([^`]+)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>'); // Inline code
-            formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>'); // Italic
-
+            formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            formattedText = formattedText.replace(/`([^`]+)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>');
+            formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>');
             return formattedText;
         };
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
 
-            // Handle code blocks
             if (line.trim().startsWith('```')) {
+                flushListItems();
                 if (inCodeBlock) {
                     elements.push(
                         <div key={`code-block-${i}`} className="relative my-2">
@@ -375,25 +380,22 @@ const App = () => {
                 continue;
             }
 
-            // Handle content inside code block
             if (inCodeBlock) {
                 codeContent += line + '\n';
                 continue;
             }
 
-            // Handle headers
             if (line.startsWith('### ')) {
+                flushListItems();
                 elements.push(<h3 key={`h3-${i}`} className="text-xl font-semibold text-white my-2">{line.substring(4)}</h3>);
                 continue;
             }
             if (line.startsWith('## ')) {
+                flushListItems();
                 elements.push(<h2 key={`h2-${i}`} className="text-2xl font-bold text-white my-3">{line.substring(3)}</h2>);
                 continue;
             }
-
-            // Handle lists
             if (line.startsWith('* ') || line.startsWith('- ')) {
-                const listItems = [];
                 let currentLine = i;
                 while (currentLine < lines.length && (lines[currentLine].startsWith('* ') || lines[currentLine].startsWith('- '))) {
                     const listItemContent = lines[currentLine].substring(2);
@@ -404,13 +406,14 @@ const App = () => {
                 i = currentLine - 1;
                 continue;
             }
-
-            // Handle paragraphs with inline formatting
             if (line.trim() !== '') {
+                flushListItems();
                 elements.push(<p key={`p-${i}`} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
             }
         }
         
+        flushListItems();
+
         return elements;
     };
     
