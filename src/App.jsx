@@ -329,102 +329,54 @@ const App = () => {
         }
     };
 
-    // --- REFACTORED renderMarkdown function to correctly handle a variety of Markdown ---
-    const renderMarkdown = (markdownText) => {
-        const elements = [];
-        const lines = markdownText.split('\n');
-        let inCodeBlock = false;
-        let codeContent = '';
-        let listItems = [];
-
-        const flushListItems = () => {
-            if (listItems.length > 0) {
-                elements.push(<ul key={elements.length} className="list-disc list-inside space-y-1 my-2 ml-4">{listItems}</ul>);
-                listItems = [];
-            }
-        };
-
-        const formatText = (text) => {
-            let formattedText = text;
-            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            formattedText = formattedText.replace(/`(.*?)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>');
-            return formattedText;
-        };
-
-        for (const line of lines) {
-            // Check for code block start/end
-            if (line.startsWith('```')) {
-                flushListItems();
-                if (inCodeBlock) {
-                    elements.push(
-                        <div key={elements.length} className="relative my-2">
-                            <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                                <code className="language-js break-words">{codeContent.trim()}</code>
-                            </pre>
-                            <button
-                                onClick={() => handleCopyClipboardText(codeContent.trim())}
-                                className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
-                                title="Copy code"
-                            >
-                                Copy
-                            </button>
-                        </div>
-                    );
-                    codeContent = '';
-                    inCodeBlock = false;
-                } else {
-                    inCodeBlock = true;
-                }
-                continue;
-            }
-
-            // Handle content inside code block
-            if (inCodeBlock) {
-                codeContent += line + '\n';
-                continue;
-            }
-
-            // Handle list items
-            if (line.startsWith('* ') || line.startsWith('- ')) {
-                const content = line.substring(2);
-                listItems.push(<li key={listItems.length} className="text-gray-100" dangerouslySetInnerHTML={{ __html: formatText(content) }} />);
-                continue;
-            }
-
-            // Handle headers
-            if (line.startsWith('### ')) {
-                flushListItems();
-                elements.push(<h3 key={elements.length} className="text-xl font-semibold text-white my-2">{line.substring(4)}</h3>);
-                continue;
-            }
-            if (line.startsWith('## ')) {
-                flushListItems();
-                elements.push(<h2 key={elements.length} className="text-2xl font-bold text-white my-3">{line.substring(3)}</h2>);
-                continue;
-            }
-
-            // Handle horizontal rules
-            if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
-                flushListItems();
-                elements.push(<hr key={elements.length} className="my-4 border-gray-600" />);
-                continue;
-            }
-
-            // Handle regular paragraphs and inline formatting
-            if (line.trim() !== '') {
-                flushListItems();
-                elements.push(<p key={elements.length} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: formatText(line) }} />);
-            }
-        }
-        
-        flushListItems();
-
-        return elements;
-    };
-    
     const renderMessageContent = (messageText) => {
-        if (!messageText) return null;
-        return renderMarkdown(messageText);
+        // Regex to find code blocks (lines starting with ``` followed by optional language)
+        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = codeBlockRegex.exec(messageText)) !== null) {
+            const [fullMatch, language, codeContent] = match;
+            const preCodeText = messageText.substring(lastIndex, match.index);
+
+            if (preCodeText) {
+                // Split preCodeText by newlines to render as paragraphs
+                preCodeText.split('\n').forEach((line, i) => {
+                    if (line.trim() !== '') {
+                        parts.push(<p key={`text-${lastIndex}-${i}`}>{line}</p>);
+                    }
+                });
+            }
+
+            parts.push(
+                <div key={`code-${match.index}`} className="relative my-2">
+                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
+                        <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
+                    </pre>
+                    <button
+                        onClick={() => handleCopyClipboardText(codeContent)}
+                        className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
+                        title="Copy code"
+                    >
+                        Copy
+                    </button>
+                </div>
+            );
+            lastIndex = match.index + fullMatch.length;
+        }
+
+        const remainingText = messageText.substring(lastIndex);
+        if (remainingText) {
+            // Split remainingText by newlines to render as paragraphs
+            remainingText.split('\n').forEach((line, i) => {
+                if (line.trim() !== '') {
+                    parts.push(<p key={`text-${lastIndex}-${i}`}>{line}</p>);
+                }
+            });
+        }
+
+        return parts;
     };
 
     const handleLogout = async () => {
@@ -562,7 +514,7 @@ const App = () => {
                                         className="ml-2 text-red-400 hover:text-red-500"
                                         title="Delete Conversation"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </button>
