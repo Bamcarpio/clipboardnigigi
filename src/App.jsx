@@ -356,7 +356,7 @@ const App = () => {
                 elements.push(
                     <div key={key++} className="relative my-2">
                         <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                            <code className={`language-${token.language}`}>{token.content}</code>
+                            <code className={`language-${token.language} break-words`}>{token.content}</code>
                         </pre>
                         <button
                             onClick={() => handleCopyClipboardText(token.content)}
