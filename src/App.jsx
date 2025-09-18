@@ -179,7 +179,24 @@ const App = () => {
         updateClipboardDebounced(laptopClipboard, value);
     };
 
-    const handleCopyClipboardText = (textToCopy) => {
+    const handleCopyClipboardText = async (textToCopy) => {
+        // Use the modern Clipboard API for a more reliable copy function
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                console.log('Text copied to clipboard successfully!');
+            } catch (err) {
+                console.error('Failed to copy text using Clipboard API: ', err);
+                // Fallback for older browsers
+                fallbackCopyTextToClipboard(textToCopy);
+            }
+        } else {
+            // Fallback for browsers that don't support the Clipboard API
+            fallbackCopyTextToClipboard(textToCopy);
+        }
+    };
+
+    const fallbackCopyTextToClipboard = (textToCopy) => {
         const el = document.createElement('textarea');
         el.value = textToCopy;
         el.setAttribute('readonly', '');
@@ -189,14 +206,14 @@ const App = () => {
         el.select();
         try {
             document.execCommand('copy');
-            console.log('Text copied to clipboard!');
+            console.log('Text copied to clipboard using fallback method!');
         } catch (err) {
-            console.error('Failed to copy text: ', err);
+            console.error('Failed to copy text with fallback: ', err);
         } finally {
             document.body.removeChild(el);
         }
     };
-        
+
     // --- Chat Tool Functions ---
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -583,7 +600,7 @@ const App = () => {
                                     onClick={() => setCurrentPage('clipboard')}
                                     className="px-3 py-1 bg-indigo-700 hover:bg-indigo-800 text-white text-sm rounded-md transition duration-200 ease-in-out"
                                 >
-                                   Clipboard
+                                    Clipboard
                                 </button>
                                 <span className="flex-1 text-center">Supa Bam Tool for Adine</span>
                                 <button
@@ -611,7 +628,7 @@ const App = () => {
                                 <>
                                     {messages.length === 0 && !isTyping && (
                                         <div className="text-center text-gray-400 mt-10">
-                                           I love you, Love! You can do it!!
+                                            I love you, Love! You can do it!!
                                         </div>
                                     )}
                                     {messages.map((msg, index) => (
