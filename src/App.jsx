@@ -179,22 +179,24 @@ const App = () => {
         updateClipboardDebounced(laptopClipboard, value);
     };
 
-    // --- NEW: Copy function with modern API and fallback ---
+    // --- Copy function with modern API and fallback ---
     const handleCopyClipboardText = async (textToCopy) => {
         if (!textToCopy) {
             console.warn("Attempted to copy empty text.");
             return;
         }
-
+        
+        // Use the modern Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                alert('Text copied to clipboard!');
+                console.log('Text copied to clipboard!'); // Replaced alert with console.log
             } catch (err) {
                 console.error('Failed to copy text using Clipboard API: ', err);
                 fallbackCopyTextToClipboard(textToCopy);
             }
         } else {
+            // Fallback for older browsers
             fallbackCopyTextToClipboard(textToCopy);
         }
     };
@@ -209,10 +211,9 @@ const App = () => {
         el.select();
         try {
             document.execCommand('copy');
-            alert('Text copied to clipboard!');
+            console.log('Text copied to clipboard!'); // Replaced alert with console.log
         } catch (err) {
             console.error('Failed to copy text with fallback: ', err);
-            alert('Failed to copy text. Please copy manually.');
         } finally {
             document.body.removeChild(el);
         }
@@ -329,54 +330,93 @@ const App = () => {
         }
     };
 
-    const renderMessageContent = (messageText) => {
-        // Regex to find code blocks (lines starting with ``` followed by optional language)
-        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
-        const parts = [];
-        let lastIndex = 0;
-        let match;
+    // --- REWRITTEN renderMarkdown function for correct Markdown parsing ---
+    const renderMarkdown = (markdownText) => {
+        const elements = [];
+        const lines = markdownText.split('\n');
+        let inCodeBlock = false;
+        let codeContent = '';
 
-        while ((match = codeBlockRegex.exec(messageText)) !== null) {
-            const [fullMatch, language, codeContent] = match;
-            const preCodeText = messageText.substring(lastIndex, match.index);
+        const renderInlineMarkdown = (text) => {
+            let formattedText = text;
+            formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>'); // Bold and italic
+            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
+            formattedText = formattedText.replace(/`([^`]+)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>'); // Inline code
+            formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>'); // Italic
 
-            if (preCodeText) {
-                // Split preCodeText by newlines to render as paragraphs
-                preCodeText.split('\n').forEach((line, i) => {
-                    if (line.trim() !== '') {
-                        parts.push(<p key={`text-${lastIndex}-${i}`}>{line}</p>);
-                    }
-                });
+            return formattedText;
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Handle code blocks
+            if (line.trim().startsWith('```')) {
+                if (inCodeBlock) {
+                    elements.push(
+                        <div key={`code-block-${i}`} className="relative my-2">
+                            <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
+                                <code className="break-words">{codeContent}</code>
+                            </pre>
+                            <button
+                                onClick={() => handleCopyClipboardText(codeContent)}
+                                className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
+                                title="Copy code"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    );
+                    codeContent = '';
+                    inCodeBlock = false;
+                } else {
+                    inCodeBlock = true;
+                }
+                continue;
             }
 
-            parts.push(
-                <div key={`code-${match.index}`} className="relative my-2">
-                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                        <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
-                    </pre>
-                    <button
-                        onClick={() => handleCopyClipboardText(codeContent)}
-                        className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
-                        title="Copy code"
-                    >
-                        Copy
-                    </button>
-                </div>
-            );
-            lastIndex = match.index + fullMatch.length;
-        }
+            // Handle content inside code block
+            if (inCodeBlock) {
+                codeContent += line + '\n';
+                continue;
+            }
 
-        const remainingText = messageText.substring(lastIndex);
-        if (remainingText) {
-            // Split remainingText by newlines to render as paragraphs
-            remainingText.split('\n').forEach((line, i) => {
-                if (line.trim() !== '') {
-                    parts.push(<p key={`text-${lastIndex}-${i}`}>{line}</p>);
+            // Handle headers
+            if (line.startsWith('### ')) {
+                elements.push(<h3 key={`h3-${i}`} className="text-xl font-semibold text-white my-2">{line.substring(4)}</h3>);
+                continue;
+            }
+            if (line.startsWith('## ')) {
+                elements.push(<h2 key={`h2-${i}`} className="text-2xl font-bold text-white my-3">{line.substring(3)}</h2>);
+                continue;
+            }
+
+            // Handle lists
+            if (line.startsWith('* ') || line.startsWith('- ')) {
+                const listItems = [];
+                let currentLine = i;
+                while (currentLine < lines.length && (lines[currentLine].startsWith('* ') || lines[currentLine].startsWith('- '))) {
+                    const listItemContent = lines[currentLine].substring(2);
+                    listItems.push(<li key={`li-${currentLine}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(listItemContent) }} />);
+                    currentLine++;
                 }
-            });
-        }
+                elements.push(<ul key={`ul-${i}`} className="list-disc list-inside space-y-1 my-2 ml-4">{listItems}</ul>);
+                i = currentLine - 1;
+                continue;
+            }
 
-        return parts;
+            // Handle paragraphs with inline formatting
+            if (line.trim() !== '') {
+                elements.push(<p key={`p-${i}`} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
+            }
+        }
+        
+        return elements;
+    };
+    
+    const renderMessageContent = (messageText) => {
+        if (!messageText) return null;
+        return renderMarkdown(messageText);
     };
 
     const handleLogout = async () => {
