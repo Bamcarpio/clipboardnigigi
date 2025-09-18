@@ -4,6 +4,7 @@ import app from './firebase';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDatabase, ref, set, onValue, push, remove } from 'firebase/database';
 import debounce from 'lodash.debounce';
+import LoginPage from './LoginPage';
 
 // New TypingIndicator component
 const TypingIndicator = () => (
@@ -188,7 +189,7 @@ const App = () => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                alert('Text copied to clipboard successfully!'); // Provide explicit feedback
+                alert('Text copied successfully!'); // Provide user feedback
             } catch (err) {
                 console.error('Failed to copy text using Clipboard API: ', err);
                 // Fallback for older browsers or security issues
@@ -210,10 +211,10 @@ const App = () => {
         el.select();
         try {
             document.execCommand('copy');
-            alert('Text copied to clipboard using fallback method!');
+            alert('Text copied successfully!'); // Provide user feedback
         } catch (err) {
             console.error('Failed to copy text with fallback: ', err);
-            alert('Failed to copy text. Please try again or copy manually.');
+            alert('Failed to copy text. Please copy manually.');
         } finally {
             document.body.removeChild(el);
         }
@@ -278,7 +279,7 @@ const App = () => {
         if (input.trim() === '' || !activeConversationId) return;
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
-        
+            
         const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
         setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
