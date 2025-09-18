@@ -5,6 +5,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDatabase, ref, set, onValue, push, remove } from 'firebase/database';
 import debounce from 'lodash.debounce';
 import LoginPage from './LoginPage';
+import './index.css'; // Add this line to import the new CSS
 
 // New TypingIndicator component
 const TypingIndicator = () => (
@@ -331,12 +332,13 @@ const App = () => {
         if (!messageText) return null;
 
         const parts = [];
-        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
+        // Fixed regex to correctly capture code blocks without over-matching
+        const codeBlockRegex = /```([\s\S]*?)```/g;
         let lastIndex = 0;
         let match;
 
         while ((match = codeBlockRegex.exec(messageText)) !== null) {
-            const [fullMatch, language, codeContent] = match;
+            const [fullMatch, codeContent] = match;
             const preCodeText = messageText.substring(lastIndex, match.index);
 
             if (preCodeText) {
@@ -348,9 +350,9 @@ const App = () => {
             }
 
             parts.push(
-                <div key={`code-${match.index}`} className="relative my-2">
+                <div key={`code-${match.index}`} className="relative my-2 w-full max-w-full overflow-hidden">
                     <pre className="bg-black text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
-                        <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
+                        <code className="language-plaintext">{codeContent}</code>
                     </pre>
                     <button
                         onClick={() => handleCopyClipboardText(codeContent)}
@@ -597,7 +599,7 @@ const App = () => {
                         </div>
                         <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-none md:rounded-br-xl">
                             <textarea
-                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out **max-h-40 overflow-y-auto** bg-gray-700 text-gray-100"
+                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out max-h-40 overflow-y-auto bg-gray-700 text-gray-100"
                                 placeholder=""
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
