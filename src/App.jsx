@@ -330,9 +330,8 @@ const App = () => {
 
     const renderMessageContent = (messageText) => {
         if (!messageText) return null;
-
+        
         const parts = [];
-        // Updated regex to handle both markdown and non-markdown code blocks
         const codeBlockRegex = /```([\s\S]*?)```/g;
         let lastIndex = 0;
         let match;
@@ -369,7 +368,7 @@ const App = () => {
 
         const remainingText = messageText.substring(lastIndex);
         
-        // Secondary check for code-like content that isn't in a markdown block (e.g., from your first image)
+        // Secondary check for code-like content that isn't in a markdown block
         const isCodeLike = remainingText.split('\n').some(line => {
             const trimmedLine = line.trim();
             return (
@@ -554,7 +553,7 @@ const App = () => {
                                         className="ml-2 text-red-400 hover:text-red-500"
                                         title="Delete Conversation"
                                     >
-                                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </button>
@@ -609,10 +608,10 @@ const App = () => {
                                                 }`}
                                         >
                                             <div
-                                                className={`p-3 rounded-lg shadow-sm ${
+                                                className={`p-3 rounded-lg shadow-sm max-w-[85%] ${
                                                     msg.sender === 'user'
-                                                        ? 'bg-blue-600 text-white rounded-br-none max-w-sm'
-                                                        : 'bg-gray-600 text-gray-100 rounded-bl-none max-w-full'
+                                                        ? 'bg-blue-600 text-white rounded-br-none'
+                                                        : 'bg-gray-600 text-gray-100 rounded-bl-none'
                                                     }`}
                                             >
                                                 {renderMessageContent(msg.text)}
