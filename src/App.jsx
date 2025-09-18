@@ -225,6 +225,13 @@ const App = () => {
         scrollToBottom();
     }, [messages, isTyping]);
 
+    // New useEffect to trigger Prism.js highlighting
+    useEffect(() => {
+        if (window.Prism) {
+            window.Prism.highlightAll();
+        }
+    }, [messages]);
+
     const createNewConversation = () => {
         if (activeConversationId && messages.length === 0) {
             setIsSidebarOpen(false);
@@ -349,7 +356,7 @@ const App = () => {
 
             parts.push(
                 <div key={`code-${match.index}`} className="relative my-2">
-                    <pre className="language-`{language || 'plaintext'}` bg-black p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
+                    <pre className={`language-${language || 'plaintext'} bg-black p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words`}>
                         <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
                     </pre>
                     <button
