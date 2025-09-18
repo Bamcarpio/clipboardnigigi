@@ -179,25 +179,7 @@ const App = () => {
         updateClipboardDebounced(laptopClipboard, value);
     };
 
-    // New, more robust function for copying code blocks
-    const handleCopyCodeToClipboard = (elementId) => {
-        const element = document.getElementById(elementId);
-        if (element) {
-            const textToCopy = element.innerText || element.textContent;
-            navigator.clipboard.writeText(textToCopy)
-                .then(() => {
-                    alert('Code copied to clipboard successfully!');
-                })
-                .catch(err => {
-                    console.error('Failed to copy text using Clipboard API: ', err);
-                    alert('Failed to copy text. Please try again or copy manually.');
-                });
-        } else {
-            console.error('Element to copy not found:', elementId);
-        }
-    };
-    
-    // Original function for other text areas
+    // --- NEW: Copy function with modern API and fallback ---
     const handleCopyClipboardText = async (textToCopy) => {
         if (!textToCopy) {
             console.warn("Attempted to copy empty text.");
@@ -207,7 +189,7 @@ const App = () => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                alert('Text copied successfully!');
+                alert('Text copied to clipboard!');
             } catch (err) {
                 console.error('Failed to copy text using Clipboard API: ', err);
                 fallbackCopyTextToClipboard(textToCopy);
@@ -227,7 +209,7 @@ const App = () => {
         el.select();
         try {
             document.execCommand('copy');
-            alert('Text copied successfully!');
+            alert('Text copied to clipboard!');
         } catch (err) {
             console.error('Failed to copy text with fallback: ', err);
             alert('Failed to copy text. Please copy manually.');
@@ -246,12 +228,10 @@ const App = () => {
     }, [messages, isTyping]);
 
     const createNewConversation = () => {
-        // Prevent creating a new chat if the current active one is already empty
         if (activeConversationId && messages.length === 0) {
             setIsSidebarOpen(false);
             return;
         }
-
         if (db && userId) {
             setLoadingChat(true);
             const newChatRef = push(ref(db, `artifacts/${appId}/users/${userId}/conversations`));
@@ -281,7 +261,6 @@ const App = () => {
     };
 
     const loadConversation = (conversationId) => {
-        // Only load if the selected conversation is different from the current one
         if (activeConversationId === conversationId) {
             console.log("Conversation is already active. Skipping reload.");
             return;
@@ -295,7 +274,7 @@ const App = () => {
         if (input.trim() === '' || !activeConversationId) return;
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
-            
+        
         const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
         setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
@@ -312,7 +291,7 @@ const App = () => {
                     role: msg.sender === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.text }]
                 }));
-                
+            
             const payload = { contents: chatHistory };
 
             const response = await fetch(apiUrl, {
@@ -321,7 +300,7 @@ const App = () => {
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-                
+            
             const toolResponseText = result.candidates && result.candidates.length > 0 &&
                                     result.candidates[0].content && result.candidates[0].content.parts &&
                                     result.candidates[0].content.parts.length > 0
@@ -350,113 +329,28 @@ const App = () => {
         }
     };
 
+    // --- REFACTORED renderMarkdown function to correctly handle code blocks ---
     const renderMarkdown = (markdownText) => {
         const elements = [];
-        const lines = markdownText.split('\n');
-        let inCodeBlock = false;
-        let codeContent = '';
-        let listItems = [];
-        let codeBlockIdCounter = 0;
+        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
+        let lastIndex = 0;
+        let match;
 
-        const renderLists = () => {
-            if (listItems.length > 0) {
-                elements.push(<ul key={elements.length} className="list-disc list-inside space-y-1 my-2 ml-4">{listItems}</ul>);
-                listItems = [];
-            }
-        };
+        while ((match = codeBlockRegex.exec(markdownText)) !== null) {
+            const [fullMatch, language, codeContent] = match;
+            const preCodeText = markdownText.substring(lastIndex, match.index);
 
-        const formatText = (text) => {
-            const cleanedText = text.replace(/`/g, '');
-            let formattedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            formattedText = formattedText.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-400 hover:underline">$1</a>');
-            return formattedText;
-        };
-
-        for (const line of lines) {
-            if (line.startsWith('```')) {
-                renderLists();
-                if (inCodeBlock) {
-                    const codeBlockId = `code-block-${codeBlockIdCounter++}`;
-                    elements.push(
-                        <div key={elements.length} className="relative my-2">
-                            <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                                <code id={codeBlockId} className="language-js break-words">{codeContent.trim()}</code>
-                            </pre>
-                            <button
-                                onClick={() => handleCopyCodeToClipboard(codeBlockId)}
-                                className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
-                                title="Copy code"
-                            >
-                                Copy
-                            </button>
-                        </div>
-                    );
-                    codeContent = '';
-                    inCodeBlock = false;
-                } else {
-                    inCodeBlock = true;
-                }
-                continue;
+            if (preCodeText) {
+                elements.push(<p key={`text-${lastIndex}`} className="text-gray-100 my-2">{preCodeText}</p>);
             }
 
-            if (inCodeBlock) {
-                codeContent += line + '\n';
-                continue;
-            }
-
-            if (line.startsWith('### ')) {
-                renderLists();
-                elements.push(<h3 key={elements.length} className="text-xl font-semibold text-white my-2">{line.substring(4)}</h3>);
-                continue;
-            }
-            if (line.startsWith('## ')) {
-                renderLists();
-                elements.push(<h2 key={elements.length} className="text-2xl font-bold text-white my-3">{line.substring(3)}</h2>);
-                continue;
-            }
-
-            if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
-                renderLists();
-                elements.push(<hr key={elements.length} className="my-4 border-gray-600" />);
-                continue;
-            }
-
-            if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
-                const parts = line.split(':');
-                if (parts.length > 1) {
-                    const title = parts[0].substring(1).trim();
-                    const explanation = parts.slice(1).join(':').trim();
-                    const formattedTitle = formatText(title);
-                    
-                    listItems.push(
-                        <li key={listItems.length} className="text-gray-100">
-                            <p className="my-2" dangerouslySetInnerHTML={{ __html: formattedTitle + ':' }} />
-                            <p className="ml-4 mb-2" dangerouslySetInnerHTML={{ __html: formatText(explanation) }} />
-                        </li>
-                    );
-                } else {
-                    const content = line.trim().substring(2);
-                    listItems.push(<li key={listItems.length} className="text-gray-100" dangerouslySetInnerHTML={{ __html: formatText(content) }} />);
-                }
-                continue;
-            }
-            
-            if (line.trim() !== '') {
-                renderLists();
-                elements.push(<p key={elements.length} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: formatText(line) }} />);
-            }
-        }
-        
-        renderLists();
-        if (inCodeBlock) {
-            const codeBlockId = `code-block-${codeBlockIdCounter++}`;
             elements.push(
-                <div key={elements.length} className="relative my-2">
+                <div key={`code-${match.index}`} className="relative my-2">
                     <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                        <code id={codeBlockId} className="language-js break-words">{codeContent.trim()}</code>
+                        <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
                     </pre>
                     <button
-                        onClick={() => handleCopyCodeToClipboard(codeBlockId)}
+                        onClick={() => handleCopyClipboardText(codeContent)}
                         className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
                         title="Copy code"
                     >
@@ -464,11 +358,17 @@ const App = () => {
                     </button>
                 </div>
             );
+            lastIndex = match.index + fullMatch.length;
+        }
+
+        const remainingText = markdownText.substring(lastIndex);
+        if (remainingText) {
+            elements.push(<p key={`text-${lastIndex}`} className="text-gray-100 my-2">{remainingText}</p>);
         }
 
         return elements;
     };
-
+    
     const renderMessageContent = (messageText) => {
         if (!messageText) return null;
         return renderMarkdown(messageText);
@@ -609,7 +509,7 @@ const App = () => {
                                         className="ml-2 text-red-400 hover:text-red-500"
                                         title="Delete Conversation"
                                     >
-                                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </button>
