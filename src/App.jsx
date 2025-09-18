@@ -27,7 +27,7 @@ const App = () => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const messagesEndRef = useRef(null);
-    const [isTyping, setIsTyping] = useState(false); // New state for typing indicator
+    const [isTyping, setIsTyping] = useState(false);
     const [loadingChat, setLoadingChat] = useState(false);
 
     // --- New Conversation States ---
@@ -127,7 +127,6 @@ const App = () => {
                 const data = snapshot.val();
                 if (data) {
                     const messagesArray = Object.values(data);
-                    // Filter out the typing indicator message when new data arrives from Firebase
                     setMessages(messagesArray.filter(msg => msg.id !== 'typing'));
                 } else {
                     setMessages([]);
@@ -205,7 +204,7 @@ const App = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, isTyping]); // Add isTyping to dependency array to scroll on typing indicator change
+    }, [messages, isTyping]);
 
     const createNewConversation = () => {
         if (db && userId) {
@@ -247,11 +246,10 @@ const App = () => {
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
         
-        // Add the user message and typing indicator to the local state immediately
         const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
         setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
-        setIsTyping(true); // Start the typing animation
+        setIsTyping(true);
 
         const messagesRef = ref(db, `artifacts/${appId}/users/${userId}/conversations/${activeConversationId}/messages`);
         const userMessageRef = push(messagesRef);
@@ -291,7 +289,6 @@ const App = () => {
             const errorMessageRef = push(messagesRef);
             set(errorMessageRef, errorMessage).catch(error => console.error("Error saving error message:", error));
         } finally {
-            // Stop typing animation regardless of success or failure
             setIsTyping(false);
         }
     };
@@ -303,46 +300,79 @@ const App = () => {
         }
     };
 
-    const renderMessageContent = (messageText) => {
-        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
+    // New function to parse and render Markdown
+    const renderMarkdown = (markdownText) => {
         const parts = [];
-        let lastIndex = 0;
+        let remainingText = markdownText;
+        let key = 0;
+
+        // Regular expression to match code blocks, lists, headings, and bold text
+        const combinedRegex = /(```(\w+)?\n([\s\S]*?)\n```)|(^\s*[\*-]\s.*)|(^#\s.*)|(\*\*(.*?)\*\*)/gm;
+        
         let match;
-        while ((match = codeBlockRegex.exec(messageText)) !== null) {
-            const [fullMatch, language, codeContent] = match;
-            const preCodeText = messageText.substring(lastIndex, match.index);
-            if (preCodeText) {
-                preCodeText.split('\n').forEach((line, i) => {
-                    if (line.trim() !== '') {
-                        parts.push(<p key={`text-${lastIndex}-${i}`}>{line}</p>);
-                    }
-                });
+        while ((match = combinedRegex.exec(remainingText)) !== null) {
+            const preMatchText = remainingText.substring(0, match.index);
+            if (preMatchText.trim()) {
+                parts.push(...preMatchText.split('\n').map(line => line.trim() ? <p key={key++}>{line}</p> : null).filter(Boolean));
             }
-            parts.push(
-                <div key={`code-${match.index}`} className="relative my-2">
-                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                        <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
-                    </pre>
-                    <button
-                        onClick={() => handleCopyClipboardText(codeContent)}
-                        className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
-                        title="Copy code"
-                    >
-                        Copy
-                    </button>
-                </div>
-            );
-            lastIndex = match.index + fullMatch.length;
-        }
-        const remainingText = messageText.substring(lastIndex);
-        if (remainingText) {
-            remainingText.split('\n').forEach((line, i) => {
-                if (line.trim() !== '') {
-                    parts.push(<p key={`text-${lastIndex}-${i}`}>{line}</p>);
+            
+            // Check for code block match
+            if (match[1]) {
+                const [fullMatch, , language, codeContent] = match;
+                parts.push(
+                    <div key={key++} className="relative my-2">
+                        <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
+                            <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
+                        </pre>
+                        <button
+                            onClick={() => handleCopyClipboardText(codeContent)}
+                            className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
+                            title="Copy code"
+                        >
+                            Copy
+                        </button>
+                    </div>
+                );
+            } 
+            // Check for list item match
+            else if (match[4]) {
+                const listItems = [match[0].trim()];
+                let listMatch;
+                const listItemRegex = /^\s*[\*-]\s(.*)/gm;
+                let currentPos = match.index + match[0].length;
+                while((listMatch = listItemRegex.exec(remainingText)) !== null && listMatch.index === currentPos) {
+                    listItems.push(listMatch[0].trim());
+                    currentPos += listMatch[0].length;
                 }
-            });
+                combinedRegex.lastIndex = currentPos;
+                
+                parts.push(<ul key={key++} className="list-disc list-inside ml-4">{listItems.map((item, i) => <li key={i}>{item.substring(1).trim()}</li>)}</ul>);
+            }
+            // Check for heading match
+            else if (match[5]) {
+                parts.push(<h3 key={key++} className="text-lg font-bold text-white my-2">{match[0].substring(2).trim()}</h3>);
+            }
+            // Check for bold text match
+            else if (match[6]) {
+                const boldText = match[7];
+                parts.push(<strong key={key++}>{boldText}</strong>);
+            }
+            
+            remainingText = remainingText.substring(match.index + match[0].length);
+            combinedRegex.lastIndex = 0;
         }
+
+        if (remainingText.trim()) {
+            parts.push(...remainingText.split('\n').map(line => line.trim() ? <p key={key++}>{line}</p> : null).filter(Boolean));
+        }
+
         return parts;
+    };
+
+
+    const renderMessageContent = (messageText) => {
+        // Now, we simply call the new Markdown renderer
+        return renderMarkdown(messageText);
     };
 
     const handleLogout = async () => {
@@ -406,7 +436,7 @@ const App = () => {
                             <button
                                 onClick={() => {
                                     setLaptopClipboard('');
-                                    saveClipboardNow(laptopClipboard, '');
+                                    saveClipboardNow('', phoneClipboard);
                                 }}
                                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-200 ease-in-out"
                             >
