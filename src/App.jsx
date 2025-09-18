@@ -207,6 +207,12 @@ const App = () => {
     }, [messages, isTyping]);
 
     const createNewConversation = () => {
+        // Prevent creating a new chat if the current active one is already empty
+        if (activeConversationId && messages.length === 0) {
+            setIsSidebarOpen(false);
+            return;
+        }
+
         if (db && userId) {
             setLoadingChat(true);
             const newChatRef = push(ref(db, `artifacts/${appId}/users/${userId}/conversations`));
@@ -236,6 +242,11 @@ const App = () => {
     };
 
     const loadConversation = (conversationId) => {
+        // Only load if the selected conversation is different from the current one
+        if (activeConversationId === conversationId) {
+            console.log("Conversation is already active. Skipping reload.");
+            return;
+        }
         setActiveConversationId(conversationId);
         setIsSidebarOpen(false);
         setLoadingChat(true);
@@ -315,16 +326,13 @@ const App = () => {
         };
 
         const formatText = (text) => {
-            // First, remove any inline code fences from the title, but keep them in the body.
             const cleanedText = text.replace(/`/g, '');
-            // Now, apply other formatting to the cleaned text.
             let formattedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             formattedText = formattedText.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-400 hover:underline">$1</a>');
             return formattedText;
         };
 
         for (const line of lines) {
-            // Check for code block fences
             if (line.startsWith('```')) {
                 renderLists();
                 if (inCodeBlock) {
@@ -355,7 +363,6 @@ const App = () => {
                 continue;
             }
 
-            // Handle headings
             if (line.startsWith('### ')) {
                 renderLists();
                 elements.push(<h3 key={elements.length} className="text-xl font-semibold text-white my-2">{line.substring(4)}</h3>);
@@ -367,14 +374,12 @@ const App = () => {
                 continue;
             }
 
-            // Handle horizontal rules
             if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
                 renderLists();
                 elements.push(<hr key={elements.length} className="my-4 border-gray-600" />);
                 continue;
             }
 
-            // Handle list items with bolded titles and separate explanations
             if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
                 const parts = line.split(':');
                 if (parts.length > 1) {
@@ -395,14 +400,12 @@ const App = () => {
                 continue;
             }
             
-            // Handle paragraphs and bold text
             if (line.trim() !== '') {
                 renderLists();
                 elements.push(<p key={elements.length} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: formatText(line) }} />);
             }
         }
         
-        // Render any remaining list items or code blocks
         renderLists();
         if (inCodeBlock) {
             elements.push(
