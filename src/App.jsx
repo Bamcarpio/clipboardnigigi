@@ -349,7 +349,7 @@ const App = () => {
 
             parts.push(
                 <div key={`code-${match.index}`} className="relative my-2">
-                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
+                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
                         <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
                     </pre>
                     <button
@@ -579,7 +579,7 @@ const App = () => {
                                                 className={`max-w-[85%] p-3 rounded-lg shadow-sm ${
                                                     msg.sender === 'user'
                                                         ? 'bg-blue-600 text-white rounded-br-none'
-                                                        : 'bg-gray-600 text-gray-100 rounded-bl-none'
+                                                        : 'bg-gray-600 text-gray-100 rounded-bl-none max-w-full'
                                                     }`}
                                             >
                                                 {renderMessageContent(msg.text)}
