@@ -315,6 +315,14 @@ const App = () => {
             }
         };
 
+        const formatText = (text) => {
+            // Replaces **text** with <strong>text</strong>
+            let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Replaces [text](url) with <a href="url" ...>text</a>
+            formattedText = formattedText.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-400 hover:underline">$1</a>');
+            return formattedText;
+        };
+
         for (const line of lines) {
             // Check for code block fences
             if (line.startsWith('```')) {
@@ -368,16 +376,15 @@ const App = () => {
 
             // Handle lists
             if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
-                const content = line.trim().substring(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                listItems.push(<li key={listItems.length} className="text-gray-100">{content}</li>);
+                const content = line.trim().substring(2);
+                listItems.push(<li key={listItems.length} className="text-gray-100" dangerouslySetInnerHTML={{ __html: formatText(content) }} />);
                 continue;
             }
             
             // Handle paragraphs and bold text
             if (line.trim() !== '') {
                 renderLists();
-                let formattedText = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-400 hover:underline">$1</a>');
-                elements.push(<p key={elements.length} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: formattedText }} />);
+                elements.push(<p key={elements.length} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: formatText(line) }} />);
             }
         }
         
