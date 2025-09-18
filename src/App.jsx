@@ -447,7 +447,7 @@ const App = () => {
                             <button
                                 onClick={() => {
                                     setLaptopClipboard('');
-                                    saveClipboardNow(laptopClipboard, '');
+                                    saveClipboardNow('', phoneClipboard);
                                 }}
                                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-200 ease-in-out"
                             >
@@ -596,16 +596,14 @@ const App = () => {
                             )}
                         </div>
                         <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-none md:rounded-br-xl">
-                            <div className="flex-1 max-h-40 overflow-y-auto bg-gray-700 text-gray-100 border border-gray-600 rounded-lg p-3">
-                                <input
-                                    type="text"
-                                    className="w-full bg-transparent focus:outline-none"
-                                    placeholder="Enter your message..."
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                />
-                            </div>
+                            <textarea
+                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out **max-h-40 overflow-y-auto** bg-gray-700 text-gray-100"
+                                placeholder=""
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                rows={1}
+                            ></textarea>
                             <button
                                 onClick={handleSendMessage}
                                 className="ml-3 px-5 py-3 bg-blue-700 text-white rounded-full hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 ease-in-out shadow-lg transform hover:scale-105"
