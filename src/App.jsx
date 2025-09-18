@@ -6,6 +6,15 @@ import { getDatabase, ref, set, onValue, push, remove } from 'firebase/database'
 import debounce from 'lodash.debounce';
 import LoginPage from './LoginPage';
 
+// New TypingIndicator component
+const TypingIndicator = () => (
+    <div className="flex space-x-1 justify-center items-center bg-gray-600 text-gray-100 p-3 rounded-lg shadow-sm rounded-bl-none w-fit">
+        <span className="dot animate-bounce" style={{ animationDelay: '0s' }}>.</span>
+        <span className="dot animate-bounce" style={{ animationDelay: '0.2s' }}>.</span>
+        <span className="dot animate-bounce" style={{ animationDelay: '0.4s' }}>.</span>
+    </div>
+);
+
 const App = () => {
     // --- Page State ---
     const [currentPage, setCurrentPage] = useState('clipboard');
@@ -18,6 +27,7 @@ const App = () => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const messagesEndRef = useRef(null);
+    const [isTyping, setIsTyping] = useState(false); // New state for typing indicator
     const [loadingChat, setLoadingChat] = useState(false);
 
     // --- New Conversation States ---
@@ -116,7 +126,9 @@ const App = () => {
             messageUnsubscribe = onValue(messagesRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    setMessages(Object.values(data));
+                    const messagesArray = Object.values(data);
+                    // Filter out the typing indicator message when new data arrives from Firebase
+                    setMessages(messagesArray.filter(msg => msg.id !== 'typing'));
                 } else {
                     setMessages([]);
                 }
@@ -193,7 +205,7 @@ const App = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [messages, isTyping]); // Add isTyping to dependency array to scroll on typing indicator change
 
     const createNewConversation = () => {
         if (db && userId) {
@@ -235,12 +247,11 @@ const App = () => {
 
         const userMessage = { text: input, sender: 'user', timestamp: Date.now() };
         
-        const newMessages = [...messages, userMessage];
-        setMessages(newMessages);
+        // Add the user message and typing indicator to the local state immediately
+        const typingIndicatorMessage = { text: '', sender: 'tool', id: 'typing' };
+        setMessages((prevMessages) => [...prevMessages, userMessage, typingIndicatorMessage]);
         setInput('');
-
-        const typingIndicator = { text: 'Supa Bam Tool is typing...', sender: 'tool', id: 'typing' };
-        setMessages((prevMessages) => [...prevMessages, typingIndicator]);
+        setIsTyping(true); // Start the typing animation
 
         const messagesRef = ref(db, `artifacts/${appId}/users/${userId}/conversations/${activeConversationId}/messages`);
         const userMessageRef = push(messagesRef);
@@ -248,7 +259,7 @@ const App = () => {
 
         try {
             const apiUrl = `/api/ask`;
-            const chatHistory = newMessages
+            const chatHistory = messages.concat(userMessage)
                 .map(msg => ({
                     role: msg.sender === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.text }]
@@ -277,7 +288,11 @@ const App = () => {
         } catch (error) {
             console.error('Error fetching tool response:', error);
             const errorMessage = { text: "Oops! Something went wrong...", sender: 'tool', timestamp: Date.now() };
-            setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== 'typing').concat(errorMessage));
+            const errorMessageRef = push(messagesRef);
+            set(errorMessageRef, errorMessage).catch(error => console.error("Error saving error message:", error));
+        } finally {
+            // Stop typing animation regardless of success or failure
+            setIsTyping(false);
         }
     };
 
@@ -353,7 +368,7 @@ const App = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 font-sans antialiased">
+        <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 font-sans antialiased">
             {currentPage === 'clipboard' ? (
                 <div className="flex flex-col w-full max-w-xl mx-auto bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
                     <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white p-4 text-center text-2xl font-semibold rounded-t-xl shadow-md">
@@ -391,7 +406,7 @@ const App = () => {
                             <button
                                 onClick={() => {
                                     setLaptopClipboard('');
-                                    saveClipboardNow('', phoneClipboard);
+                                    saveClipboardNow(laptopClipboard, '');
                                 }}
                                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-200 ease-in-out"
                             >
@@ -440,8 +455,8 @@ const App = () => {
                     </div>
                 </div>
             ) : (
-                <div className="flex flex-col md:flex-row w-full max-w-6xl mx-auto bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
-                    <div className={`md:flex flex-col p-4 bg-gray-700 md:w-1/5 flex-shrink-0 border-r border-gray-600 ${isSidebarOpen ? 'flex' : 'hidden'}`}>
+                <div className="flex flex-col md:flex-row w-full h-screen bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
+                    <div className={`md:flex flex-col p-4 bg-gray-700 md:w-1/5 flex-shrink-0 border-r border-gray-600 ${isSidebarOpen ? 'flex' : 'hidden'} overflow-y-auto custom-scrollbar`}>
                         <h3 className="text-lg font-semibold text-gray-200 mb-4">Conversations</h3>
                         <button
                             onClick={createNewConversation}
@@ -449,7 +464,7 @@ const App = () => {
                         >
                             + New Chat
                         </button>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="flex-1">
                             {allConversations.map(conv => (
                                 <div
                                     key={conv.id}
@@ -474,7 +489,7 @@ const App = () => {
                         </div>
                     </div>
 
-                    <div className="md:flex flex-col md:w-4/5 flex-shrink-0">
+                    <div className="flex flex-col flex-grow">
                         <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white p-4 text-center text-2xl font-semibold rounded-t-xl md:rounded-tr-xl md:rounded-tl-none shadow-md">
                             <div className="flex justify-between items-center">
                                 <button
@@ -500,14 +515,14 @@ const App = () => {
                             {isSidebarOpen ? 'Hide Conversations' : 'Show Conversations'}
                         </button>
                     
-                        <div className="flex-1 p-4 overflow-y-auto h-[400px] custom-scrollbar bg-gray-700">
+                        <div className="flex-grow p-4 overflow-y-auto custom-scrollbar bg-gray-700">
                             {loadingChat ? (
                                 <div className="flex justify-center items-center h-full">
                                     <p className="text-gray-400">Loading conversation...</p>
                                 </div>
                             ) : (
                                 <>
-                                    {messages.length === 0 && (
+                                    {messages.length === 0 && !isTyping && (
                                         <div className="text-center text-gray-400 mt-10">
                                             Start a new conversation or select one from the sidebar.
                                         </div>
@@ -530,11 +545,16 @@ const App = () => {
                                             </div>
                                         </div>
                                     ))}
+                                    {isTyping && (
+                                        <div className="flex mb-3 justify-start">
+                                            <TypingIndicator />
+                                        </div>
+                                    )}
                                     <div ref={messagesEndRef} />
                                 </>
                             )}
                         </div>
-                        <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-xl md:rounded-br-none">
+                        <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-none md:rounded-br-xl">
                             <textarea
                                 className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out resize-none h-12 overflow-hidden bg-gray-700 text-gray-100"
                                 placeholder="Type a message..."
