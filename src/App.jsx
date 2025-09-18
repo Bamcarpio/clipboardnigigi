@@ -5,10 +5,6 @@ import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDatabase, ref, set, onValue, push, remove } from 'firebase/database';
 import debounce from 'lodash.debounce';
 import LoginPage from './LoginPage';
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
-import "highlight.js/styles/github-dark.css"; // syntax highlight theme
 
 // New TypingIndicator component
 const TypingIndicator = () => (
@@ -331,44 +327,64 @@ const App = () => {
         }
     };
 
-   const renderMessageContent = (messageText) => {
-    if (!messageText) return null;
+    const renderMessageContent = (messageText) => {
+        if (!messageText) return null;
 
-    return (
-        <ReactMarkdown
-            className="prose prose-invert max-w-none"
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
-            components={{
-                code({ inline, className, children, ...props }) {
-                    const match = /language-(\w+)/.exec(className || "");
-                    return !inline ? (
-                        <pre className="relative my-2 bg-gray-800 text-gray-100 p-3 rounded-md overflow-x-auto text-sm">
-                            <code className={className} {...props}>
-                                {children}
-                            </code>
-                            <button
-                                onClick={() =>
-                                    handleCopyClipboardText(children.join(""))
-                                }
-                                className="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white text-xs px-2 py-1 rounded-md"
-                                title="Copy code"
-                            >
-                                Copy
-                            </button>
-                        </pre>
-                    ) : (
-                        <code className="bg-gray-700 rounded px-1 text-sm" {...props}>
-                            {children}
-                        </code>
-                    );
-                },
-            }}
-        >
-            {messageText}
-        </ReactMarkdown>
-        );
-      };
+        const parts = [];
+        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = codeBlockRegex.exec(messageText)) !== null) {
+            const [fullMatch, language, codeContent] = match;
+            const preCodeText = messageText.substring(lastIndex, match.index);
+
+            if (preCodeText) {
+                preCodeText.split('\n').forEach((line, i) => {
+                    if (line.trim() !== '') {
+                        parts.push(<p key={`pre-text-${lastIndex}-${i}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
+                    }
+                });
+            }
+
+            parts.push(
+                <div key={`code-${match.index}`} className="relative my-2">
+                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
+                        <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
+                    </pre>
+                    <button
+                        onClick={() => handleCopyClipboardText(codeContent)}
+                        className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
+                        title="Copy code"
+                    >
+                        Copy
+                    </button>
+                </div>
+            );
+            lastIndex = match.index + fullMatch.length;
+        }
+
+        const remainingText = messageText.substring(lastIndex);
+        if (remainingText) {
+            remainingText.split('\n').forEach((line, i) => {
+                if (line.trim() !== '') {
+                    parts.push(<p key={`post-text-${lastIndex}-${i}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
+                }
+            });
+        }
+
+        return parts;
+    };
+
+    const renderInlineMarkdown = (text) => {
+        let formattedText = text;
+        formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedText = formattedText.replace(/`([^`]+)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>');
+        formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+        return formattedText;
+    };
 
     const handleLogout = async () => {
         if (auth) {
