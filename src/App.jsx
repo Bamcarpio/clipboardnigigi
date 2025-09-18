@@ -328,98 +328,73 @@ const App = () => {
         }
     };
 
-    // --- REWRITTEN renderMarkdown function for correct Markdown parsing ---
-    const renderMarkdown = (markdownText) => {
-        const elements = [];
-        const lines = markdownText.split('\n');
-        let inCodeBlock = false;
-        let codeContent = '';
-        let listItems = [];
-
-        const flushListItems = () => {
-            if (listItems.length > 0) {
-                elements.push(<ul key={elements.length} className="list-disc list-inside space-y-1 my-2 ml-4">{listItems}</ul>);
-                listItems = [];
-            }
-        };
-
-        const renderInlineMarkdown = (text) => {
-            let formattedText = text;
-            formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            formattedText = formattedText.replace(/`([^`]+)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>');
-            formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>');
-            return formattedText;
-        };
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-
-            if (line.trim().startsWith('```')) {
-                flushListItems();
-                if (inCodeBlock) {
-                    elements.push(
-                        <div key={`code-block-${i}`} className="relative my-2">
-                            <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
-                                <code className="break-words">{codeContent}</code>
-                            </pre>
-                            <button
-                                onClick={() => handleCopyClipboardText(codeContent)}
-                                className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
-                                title="Copy code"
-                            >
-                                Copy
-                            </button>
-                        </div>
-                    );
-                    codeContent = '';
-                    inCodeBlock = false;
-                } else {
-                    inCodeBlock = true;
-                }
-                continue;
-            }
-
-            if (inCodeBlock) {
-                codeContent += line + '\n';
-                continue;
-            }
-
-            if (line.startsWith('### ')) {
-                flushListItems();
-                elements.push(<h3 key={`h3-${i}`} className="text-xl font-semibold text-white my-2">{line.substring(4)}</h3>);
-                continue;
-            }
-            if (line.startsWith('## ')) {
-                flushListItems();
-                elements.push(<h2 key={`h2-${i}`} className="text-2xl font-bold text-white my-3">{line.substring(3)}</h2>);
-                continue;
-            }
-            if (line.startsWith('* ') || line.startsWith('- ')) {
-                let currentLine = i;
-                while (currentLine < lines.length && (lines[currentLine].startsWith('* ') || lines[currentLine].startsWith('- '))) {
-                    const listItemContent = lines[currentLine].substring(2);
-                    listItems.push(<li key={`li-${currentLine}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(listItemContent) }} />);
-                    currentLine++;
-                }
-                elements.push(<ul key={`ul-${i}`} className="list-disc list-inside space-y-1 my-2 ml-4">{listItems}</ul>);
-                i = currentLine - 1;
-                continue;
-            }
-            if (line.trim() !== '') {
-                flushListItems();
-                elements.push(<p key={`p-${i}`} className="text-gray-100 my-2" dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
-            }
-        }
-        
-        flushListItems();
-
-        return elements;
-    };
-    
+    // --- REWRITTEN renderMessageContent for correct Markdown parsing and copy functionality ---
     const renderMessageContent = (messageText) => {
         if (!messageText) return null;
-        return renderMarkdown(messageText);
+    
+        const parts = [];
+        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
+        let lastIndex = 0;
+        let match;
+    
+        // Pass 1: Handle code blocks and split the remaining text
+        while ((match = codeBlockRegex.exec(messageText)) !== null) {
+            const [fullMatch, language, codeContent] = match;
+            const preCodeText = messageText.substring(lastIndex, match.index);
+    
+            // Process text before the code block
+            if (preCodeText) {
+                preCodeText.split('\n').forEach((line, i) => {
+                    if (line.trim() !== '') {
+                        parts.push(<p key={`pre-text-${lastIndex}-${i}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
+                    }
+                });
+            }
+    
+            // Process the code block itself
+            parts.push(
+                <div key={`code-${match.index}`} className="relative my-2">
+                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm">
+                        <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
+                    </pre>
+                    <button
+                        onClick={() => handleCopyClipboardText(codeContent)}
+                        className="absolute top-2 right-2 bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded-md transition duration-200 ease-in-out"
+                        title="Copy code"
+                    >
+                        Copy
+                    </button>
+                </div>
+            );
+            lastIndex = match.index + fullMatch.length;
+        }
+    
+        // Process the remaining text after the last code block
+        const remainingText = messageText.substring(lastIndex);
+        if (remainingText) {
+            remainingText.split('\n').forEach((line, i) => {
+                if (line.trim() !== '') {
+                    parts.push(<p key={`post-text-${lastIndex}-${i}`} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(line) }} />);
+                }
+            });
+        }
+    
+        return parts;
+    };
+    
+    // New helper function to handle inline Markdown for the text outside of code blocks
+    const renderInlineMarkdown = (text) => {
+        let formattedText = text;
+        // Bold and italic
+        formattedText = formattedText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>'); 
+        // Bold
+        formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+        // Inline code
+        formattedText = formattedText.replace(/`([^`]+)`/g, '<span class="bg-gray-700 rounded px-1 text-sm">$1</span>');
+        // Italic
+        formattedText = formattedText.replace(/_([^_]+)_/g, '<em>$1</em>');
+        
+        return formattedText;
     };
 
     const handleLogout = async () => {
@@ -557,7 +532,7 @@ const App = () => {
                                         className="ml-2 text-red-400 hover:text-red-500"
                                         title="Delete Conversation"
                                     >
-                                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </button>
