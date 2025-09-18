@@ -349,7 +349,7 @@ const App = () => {
 
             parts.push(
                 <div key={`code-${match.index}`} className="relative my-2">
-                    <pre className="bg-gray-700 text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
+                    <pre className="bg-black text-white p-3 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-words">
                         <code className={`language-${language || 'plaintext'}`}>{codeContent}</code>
                     </pre>
                     <button
