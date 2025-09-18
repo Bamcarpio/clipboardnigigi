@@ -597,7 +597,7 @@ const App = () => {
                         </div>
                         <div className="p-4 bg-gray-800 border-t border-gray-700 flex items-center rounded-b-xl md:rounded-bl-none md:rounded-br-xl">
                             <textarea
-                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out **max-h-40 overflow-y-auto** bg-gray-700 text-gray-100"
+                                className="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out resize-none max-h-40 overflow-y-auto bg-gray-700 text-gray-100"
                                 placeholder=""
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
